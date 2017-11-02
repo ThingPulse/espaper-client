@@ -25,6 +25,10 @@ Drawing a line for instance looks like this:
 ```
 which draws a line from (0,11) to (296, 11). Just like the MiniGrafx library the parser is has a state. Colors and fonts are set by a command and used by all following commands until the state is changed. This means that the JSON object is parsed strictly sequential from beginning to end. ESP8266 have only limited memory, so every command and all parameters are parsed. When a command object in JSON finishes the command will be executed. This allows parsing of very big JSON descriptions, since the all information is always directly applied to the MiniGrafx frame buffer.
 
+## espaper-client.ino
+
+This sketch is meant for fast development and not for "production". First the espaper connects to the internet and downloads the linked JSON file from the server. Then it enters the main loop until the FLASH button is pressed. This allows for very quick updates but since the ESP never goes to sleep you shouldn't use it with an ESPaper running from batteries.
+
 
 ## Setup
 
@@ -38,4 +42,4 @@ which draws a line from (0,11) to (296, 11). Just like the MiniGrafx library the
 ## Know issues
 
  * Currently fonts have to be part of the firmware. There are already methods for downloading and using fonts from the file system but there are bugs in the SDK which cause problems with bigger font files.
- * Downloading and usage of images also doesn't work well yet. 
+ * Downloading and usage of images also doesn't work well yet.

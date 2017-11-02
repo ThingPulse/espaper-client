@@ -22,6 +22,8 @@ uint16_t palette[] = {0, // 0
                       1 // 1
                       };
 
+const String SERVER_URL = "http://www.squix.org/espaper/index.php";
+
 #define SCREEN_HEIGHT 128
 #define SCREEN_WIDTH 296
 //#define SCREEN_HEIGHT 300
@@ -72,14 +74,14 @@ void setup() {
   gfx.init();
   gfx.setRotation(1);
 
-  parser.updateScreen("http://www.squix.org/espaper/index.php?battery=" + String(analogRead(A0)));
+  parser.updateScreen(SERVER_URL + "?battery=" + String(analogRead(A0)));
   //ESP.deepSleep(UPDATE_INTERVAL_SECS * 1000000);
 }
 
 void loop() {
   boolean isPressed = !digitalRead(D3);
   if (isPressed) {
-    parser.updateScreen("http://www.squix.org/espaper/index.php?battery=" + String(analogRead(A0)));
+    parser.updateScreen(SERVER_URL + "?battery=" + String(analogRead(A0)));
   }
   delay(100);
 

@@ -78,7 +78,7 @@ const String REQUEST_PATH = "/public/devices/";
     const String SHA1_FINGERPRINT = "3E 65 97 60 54 30 D7 D0 CF A3 05 27 09 9E 8D FB 71 F4 4A D9";
     const String SERVER_URL = "https://test.espaper.com";
   #else
-    const String SHA1_FINGERPRINT = "93 12 F0 8F 03 78 21 67 51 B8 F4 D6 60 B5 D6 BD CA B3 D1 01";
+    const String SHA1_FINGERPRINT = "88 E8 7C 53 15 F9 76 C3 36 0A 74 4C D7 E0 2C E1 1A 75 33 A3";
     const String SERVER_URL = "https://www.espaper.com";
   #endif
 #endif

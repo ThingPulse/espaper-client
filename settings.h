@@ -75,10 +75,11 @@ const String REQUEST_PATH = "/public/devices/";
   const String SERVER_URL = "http://192.168.0.119:8080";
 #else
   #ifdef TEST_ENV
-    const String SHA1_FINGERPRINT = "3E 65 97 60 54 30 D7 D0 CF A3 05 27 09 9E 8D FB 71 F4 4A D9";
+    const String SHA1_FINGERPRINT = "6E E2 46 12 54 FC 8F 15 0E C8 14 20 01 27 27 03 E4 FB 63 6D";
     const String SERVER_URL = "https://test.espaper.com";
   #else
-    const String SHA1_FINGERPRINT = "88 E8 7C 53 15 F9 76 C3 36 0A 74 4C D7 E0 2C E1 1A 75 33 A3";
+    // PROD
+    const String SHA1_FINGERPRINT = "26 8E 97 34 2D 40 55 0F 6A 76 D9 03 64 8D 1C 17 1F 12 AF E2";
     const String SERVER_URL = "https://www.espaper.com";
   #endif
 #endif

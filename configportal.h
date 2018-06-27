@@ -163,7 +163,7 @@ void handleNotFound() {
 
 
 void startConfigPortal(MiniGrafx *gfx) {
-
+  Serial.println("Starting config portal...");
   server.on ( "/", handleRoot );
   server.on ( "/save", handleSave);
   server.on ( "/reset", []() {
@@ -174,22 +174,21 @@ void startConfigPortal(MiniGrafx *gfx) {
   } );
   server.onNotFound ( handleNotFound );
   server.begin();
-
+  
   boolean connected = WiFi.status() == WL_CONNECTED;
-
+  Serial.printf("Is WiFi conected: %s\n", connected ? "yes": "no");
   gfx->fillBuffer(1);
   gfx->setColor(0);
   gfx->setTextAlignment(TEXT_ALIGN_CENTER);
   gfx->setFont(ArialMT_Plain_16);
-  
+  Serial.printf("Is WiFi conected: %s\n", connected ? "yes": "no");
+
   if (connected) {
       Serial.println ( "Open browser at http://" + WiFi.localIP() );
 
       gfx->drawString(296 / 2, 10, "ESPaper Setup Mode\nConnected to: " + WiFi.SSID() + "\nOpen browser at\nhttp://" + WiFi.localIP().toString());
       
   } else {
-      WiFi.forceSleepWake();
-      delay( 1 );
       WiFi.mode(WIFI_AP);
       WiFi.softAP(CONFIG_SSID.c_str());
       IPAddress myIP = WiFi.softAPIP();  
@@ -199,7 +198,7 @@ void startConfigPortal(MiniGrafx *gfx) {
       gfx->drawString(296 / 2, 10, "ESPaper Setup Mode\nConnect WiFi to:\n" + CONFIG_SSID + "\nOpen browser at\nhttp://" + myIP.toString());
 
   }
-
+  Serial.println("Committing.. screen");
   gfx->commit();
 
   Serial.println ( "HTTP server started" );

@@ -1,7 +1,7 @@
 #ifndef _ESPAPERPARSERH_
 #define _ESPAPERPARSERH_
 
-#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ESP8266WiFi.h>
 #include <MiniGrafx.h>
 #include <JsonListener.h>
@@ -24,12 +24,12 @@ class EspaperParser: public JsonListener {
     TEXT_ALIGNMENT textAlignment = TEXT_ALIGN_LEFT;
     boolean isPgmFont = true;
     const char *fontData = ArialMT_Plain_10;
+    const unsigned char* rootCert;
+    uint16_t rootCertLen;
     String baseUrl;
     String requestPath;
-    String sha1Fingerprint;
     String deviceSecret;
     String clientVersion;
-    HTTPClient http;
     
 
     // Command variables
@@ -53,10 +53,14 @@ class EspaperParser: public JsonListener {
 
   public:
     EspaperParser(MiniGrafx *gfx);
+
+    void setRootCertificate(const unsigned char* rootCertificate, uint16_t rootCertificateLength);
   
-    boolean updateScreen(String baseUrl, String sha1Fingerprint, String requestPath, String deviceSecret, String clientVersion);
+    int updateScreen(String baseUrl, String requestPath, String deviceSecret, String clientVersion);
 
     int downloadResource(String url, String fileName, long expires);
+
+    int downloadResource(String protocol, String host, uint16_t port, String path, String fileName, long expires);
 
     boolean setFont(String url, String fontFamily, String fontStyle, String fontSize);
 

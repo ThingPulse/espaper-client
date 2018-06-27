@@ -6,21 +6,25 @@ EspaperParser::EspaperParser(MiniGrafx *gfx) {
   this->gfx = gfx;
 }
 
-boolean EspaperParser::updateScreen(String baseUrl, String sha1Fingerprint, String requestPath, String deviceSecret, String clientVersion) {
+void EspaperParser::setRootCertificate(const unsigned char* rootCertificate, uint16_t rootCertificateLength) {
+  this->rootCert = rootCertificate;
+  this->rootCertLen = rootCertificateLength;
+}
+
+int EspaperParser::updateScreen(String baseUrl, String requestPath, String deviceSecret, String clientVersion) {
   this->baseUrl = baseUrl;
   this->requestPath = requestPath;
-  this->sha1Fingerprint = sha1Fingerprint;
   this->deviceSecret = deviceSecret;
   this->clientVersion = clientVersion;
 
   String url = baseUrl + requestPath;
   int httpCode = downloadResource(url, "request.json", 0);
-  if (httpCode < 0 || httpCode != HTTP_CODE_OK) {
+  if (httpCode < 0 || httpCode != 200) {
     gfx->fillBuffer(1);
     gfx->setColor(0);
     gfx->setTextAlignment(TEXT_ALIGN_CENTER);
     gfx->setFont(ArialMT_Plain_16);
-    gfx->drawString(296 / 2, 20, "Device not found or access not allowed. \nPlease configure this device on\nespaper.com\nHTTP CODE: " + String(httpCode));
+    gfx->drawString(296 / 2, 20, "Error connecting to the server\nHTTP CODE: " + String(httpCode));
     gfx->commit();
     return false;
   }
@@ -216,6 +220,10 @@ void EspaperParser::endObject() {
       gfx->setTextAlignment(textAlignment);
 
     } else  if (currentCommand == "commit") {
+      #ifndef DEV_ENV
+        USE_SERIAL.println("Turning off WiFi");
+        WiFi.forceSleepBegin();
+      #endif
       USE_SERIAL.printf("->commit()\n");
       long startTime = millis();
       gfx->commit();
@@ -232,8 +240,11 @@ void EspaperParser::endObject() {
       downloadResource(this->url, "/cache/" + this->fileName, this->expires);
 
     } else  if (currentCommand == "drawImage") {
+      long beforeImageDownload = millis();
       downloadResource(this->baseUrl + this->url, "/cache/image", 0);
+      Serial.printf("Time for image download: %d\n", (millis() - beforeImageDownload));
       gfx->drawPalettedBitmapFromFile(x1, y1, "/cache/image");
+      
 
     } else  if (currentCommand == "drawBmpFromFile") {
       gfx->drawBmpFromFile("/cache/" + fileName, x1, y1);
@@ -274,6 +285,51 @@ boolean EspaperParser::setFont(String url, String fontFamily, String fontStyle, 
 }
 
 int EspaperParser::downloadResource(String url, String fileName, long expires) {
+
+    // Code from https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp
+    // check for : (http: or https:
+    int index = url.indexOf(':');
+    if(index < 0) {
+        USE_SERIAL.print("[HTTP-Client][begin] failed to parse protocol\n");
+        return false;
+    }
+
+    String _protocol = url.substring(0, index);
+    url.remove(0, (index + 3)); // remove http:// or https://
+
+    index = url.indexOf('/');
+    String host = url.substring(0, index);
+    String _host;
+    int _port = 0;
+    url.remove(0, index); // remove host part
+
+    // get Authorization
+    index = host.indexOf('@');
+    if(index >= 0) {
+        // auth info
+        String auth = host.substring(0, index);
+        host.remove(0, index + 1); // remove auth part including @
+    }
+
+    // get port
+    index = host.indexOf(':');
+    if(index >= 0) {
+        _host = host.substring(0, index); // hostname
+        host.remove(0, (index + 1)); // remove hostname + :
+        _port = host.toInt(); // get port
+    } else {
+        _host = host;
+        _port = _protocol == "http" ? 80 : 443;
+    }
+    String _uri = url;
+
+    return this->downloadResource(_protocol, _host, _port, _uri, fileName, expires);
+}
+
+
+int EspaperParser::downloadResource(String protocol, String host, uint16_t port, String url, String fileName, long expires) {
+  USE_SERIAL.printf("Protocol: %s\n Host: %s\n Port: %d\n URL: %s\n FileName: %s\n Expires: %d\n", protocol.c_str(), host.c_str(), port, url.c_str(), fileName.c_str(), expires);
+  
   String path = fileName;
   String markerFilename = path + "_";
   USE_SERIAL.println("Creating cache marker " + markerFilename);
@@ -294,93 +350,124 @@ int EspaperParser::downloadResource(String url, String fileName, long expires) {
   SPIFFS.info(fs_info);
   USE_SERIAL.printf("FS after cleanup: %d of %d bytes used", fs_info.usedBytes, fs_info.totalBytes);
 
-
-  http.setUserAgent("ESPaperClient/1.0");
-
-
   USE_SERIAL.print("[HTTP] begin...\n");
-  // configure server and url
-  if (this->sha1Fingerprint == "") {
-    http.begin(url);
-  } else {
-    USE_SERIAL.printf("URL: %s with fingerprint %s", url.c_str(), this->sha1Fingerprint.c_str());
-    http.begin(url, this->sha1Fingerprint);
+
+  WiFiClientSecure client;
+
+  if (this->rootCertLen > 0) {
+    USE_SERIAL.println("Loading root certificate");
+    bool res = client.setCACert_P(this->rootCert, this->rootCertLen);
+  
+    if (!res) {
+      Serial.println("Failed to load root CA certificate!");
+      while (true) {
+        yield();
+      }
+    }
+  }
+  USE_SERIAL.printf("Connecting to %s:%d", host.c_str(), port);
+  if (!client.connect(host, port)) {
+    Serial.println("connection failed");
+    return -1;
   }
 
-  http.addHeader("X-ESPAPER-SECRET", deviceSecret);
-  http.addHeader("X-ESPAPER-CLIENT-VERSION", this->clientVersion);
-  http.addHeader("X-ESPAPER-BATTERY", String(analogRead(A0)));
-  http.addHeader("X-ESPAPER-SPIFFS-FREE", String(fs_info.totalBytes - fs_info.usedBytes));
-  http.addHeader("X-ESPAPER-SPIFFS-TOTAL", String(fs_info.totalBytes));
-  http.addHeader("X-ESPAPER-MILLIS", String(millis()));
-  http.addHeader("X-ESPAPER-FREE-HEAP", String(ESP.getFreeHeap()));
-  http.addHeader("X-ESPAPER-WIFI-RSSI", String(WiFi.RSSI()));
+  /*if (this->rootCertLen > 0 && client.verifyCertChain(host.c_str())) {
+    Serial.println("Server certificate verified");
+  } else {
+    Serial.println("ERROR: certificate verification failed!");
+    return -1;
+  }*/
 
+  String EOL = "\r\n";
 
-  USE_SERIAL.print("[HTTP] GET...\n");
-  // start connection and send HTTP header
-
-  int httpCode = http.GET();
-  USE_SERIAL.printf("[HTTP] GET... code: %d\n", httpCode);
+  String request = "GET " + url + " HTTP/1.1\r\n" +
+                   "Host: " + host + "\r\n" +
+                   "User-Agent: ESPaperClient/1.0\r\n" +
+                   "X-ESPAPER-SECRET: " + deviceSecret + EOL +
+                   "X-ESPAPER-CLIENT-VERSION: " + this->clientVersion + EOL +
+                   "X-ESPAPER-BATTERY: " + String(analogRead(A0)) + EOL +
+                   "X-ESPAPER-SPIFFS-FREE: " + (fs_info.totalBytes - fs_info.usedBytes) + EOL +
+                   "X-ESPAPER-SPIFFS-TOTAL: " + String(fs_info.totalBytes) + EOL +
+                   "X-ESPAPER-MILLIS: " + String(millis()) + "\r\n" +
+                   "X-ESPAPER-FREE-HEAP: " + String(ESP.getFreeHeap()) + EOL +
+                   "X-ESPAPER-WIFI-RSSI: " + String(WiFi.RSSI()) + EOL +
+                   "Connection: close\r\n\r\n";
+                   
+  USE_SERIAL.println("Sending request: " +request);
+  
+  client.print(request);
+  int httpCode = 0;
+  while (client.connected()) {
+    String line = client.readStringUntil('\n');
+    USE_SERIAL.println(line);
+    if (line.startsWith("HTTP/1.")) {
+      httpCode = line.substring(9, line.indexOf(' ', 9)).toInt();
+      USE_SERIAL.printf("HTTP Code: %d\n", httpCode); 
+    }
+    if (line == "\r" || line == "\r\n") {
+      USE_SERIAL.println("headers received");
+      break;
+    }
+  }
 
   long downloadedBytes = 0;
   if (httpCode > 0) {
 
 
     // file found at server
-    if (httpCode == HTTP_CODE_OK) {
+    if (httpCode == 200) {
       File file = SPIFFS.open(path, "w+");
       if (!file) {
         USE_SERIAL.println("Creating file failed: " + path);
       }
       // get lenght of document (is -1 when Server sends no Content-Length header)
-      int len = http.getSize();
-      USE_SERIAL.printf("Payload size: %d\n", len);
+
+      // USE_SERIAL.printf("Payload size: %d\n", len);
       // create buffer for read
       uint8_t buff[128] = { 0 };
 
-      // get tcp stream
-      WiFiClient * stream = http.getStreamPtr();
 
       // read all data from server
       long lastUpdate = millis();
-      while (http.connected() && (len > 0 || len == -1)) {
+      while (client.connected()) {
         // get available data size
-        size_t size = stream->available();
+        size_t size = client.available();
 
         if (size) {
           // read up to 1024 byte
-          int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+          int c = client.readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
           downloadedBytes += c;
 
           file.write(buff, c);
 
-          if (len > 0) {
+          /*if (len > 0) {
             len -= c;
-          }
+          }*/
         }
         if (millis() - lastUpdate > 500) {
           lastUpdate = millis();
-          Serial.printf("Bytes left: %d. Available: %d\n", len, size);
+          //Serial.printf("Bytes left: %d. Available: %d\n", len, size);
         }
       }
       file.close();
+      client.stop();
       USE_SERIAL.printf("Downloaded file %s with size %d", fileName.c_str(), downloadedBytes);
       USE_SERIAL.println();
       USE_SERIAL.print("[HTTP] connection closed or file end.\n");
-      return HTTP_CODE_OK;
+      return httpCode;
 
     } else {
-      USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+      client.stop();
+      //USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
       return httpCode;
     }
   } else {
-    USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-    return httpCode;
+    client.stop();
+    //USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+    return httpCode;//httpCode;
   }
-
-  http.end();
-  return true;
+  
+  return -2;
 
 }
 

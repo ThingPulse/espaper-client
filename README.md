@@ -1,12 +1,16 @@
-# espaper-client
+# ThingPulse ESPaper client
 
 This code parses and dispalys espaper-json descriptions and displays the results on an ESPaper module. ESPaper module can be ordered here:
 
- * <https://blog.squix.org/product/2-9-espaper-lite-kit>
- * <https://blog.squix.org/product/2-9-espaper-plus-kit>
+ * https://thingpulse.com/product/espaper-lite-kit-wifi-epaper-display/
+ * https://thingpulse.com/product/espaper-plus-kit-wifi-epaper-display/
 
  You are supporting the creator of this library.
  
+## Service level promise
+
+<table><tr><td><img src="https://thingpulse.com/assets/ThingPulse-open-source-prime.png" width="150">
+</td><td>This is a ThingPulse <em>prime</em> project. See our <a href="https://thingpulse.com/about/open-source-commitment/">open-source commitment declaration</a> for what this means.</td></tr></table>
 
 ## Background
 

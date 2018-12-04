@@ -24,8 +24,7 @@ class EspaperParser: public JsonListener {
     TEXT_ALIGNMENT textAlignment = TEXT_ALIGN_LEFT;
     boolean isPgmFont = true;
     const char *fontData = ArialMT_Plain_10;
-    const unsigned char* rootCert;
-    uint16_t rootCertLen;
+    const char *rootCert;
     String baseUrl;
     String requestPath;
     String deviceSecret;
@@ -54,9 +53,11 @@ class EspaperParser: public JsonListener {
   public:
     EspaperParser(MiniGrafx *gfx);
 
-    void setRootCertificate(const unsigned char* rootCertificate, uint16_t rootCertificateLength);
+    void setRootCertificate(const char *rootCertificate);
   
     int updateScreen(String baseUrl, String requestPath, String deviceSecret, String clientVersion);
+
+    int getAndDrawScreen(String baseUrl, String requestPath, String deviceSecret, String clientVersion);
 
     int downloadResource(String url, String fileName, long expires);
 

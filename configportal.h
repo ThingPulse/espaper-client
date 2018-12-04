@@ -97,7 +97,7 @@ boolean loadConfig() {
       }
 
   }
-  if (WIFI_SSID == "" || WIFI_PASS == "" || DEVICE_KEY == "" || DEVICE_ID =="") {
+  if (WIFI_SSID == "" || DEVICE_KEY == "" || DEVICE_ID =="") {
     Serial.println("At least one attribute not defined");
     return false;
   }
@@ -114,7 +114,7 @@ void handleRoot() {
   //page += _customHeadElement;
   page += FPSTR(HTTP_HEAD_END);
   page += "<h1>ESPaper Configuration</h1>";
-
+  page += "Mac Address: " + WiFi.macAddress() + "<BR/>";
   //page += FPSTR(HTTP_PORTAL_OPTIONS);
   page += FPSTR(HTTP_FORM_START);
   page += getFormField("ssid", "WiFi SSID", "20", WIFI_SSID, "");

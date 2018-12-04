@@ -2,13 +2,44 @@
 
 #define USE_SERIAL  Serial
 
+
+
 EspaperParser::EspaperParser(MiniGrafx *gfx) {
   this->gfx = gfx;
 }
 
-void EspaperParser::setRootCertificate(const unsigned char* rootCertificate, uint16_t rootCertificateLength) {
+void EspaperParser::setRootCertificate(const char *rootCertificate) {
   this->rootCert = rootCertificate;
-  this->rootCertLen = rootCertificateLength;
+}
+
+int EspaperParser::getAndDrawScreen(String baseUrl, String requestPath, String deviceSecret, String clientVersion) {
+    this->baseUrl = baseUrl;
+  this->requestPath = requestPath;
+  this->deviceSecret = deviceSecret;
+  this->clientVersion = clientVersion;
+  
+  String url = baseUrl + requestPath;
+  int httpCode = downloadResource(url, "/screen", 0);
+  if (httpCode < 0 || httpCode != 200) {
+    gfx->init();
+    gfx->fillBuffer(1);
+    gfx->setColor(0);
+    gfx->setTextAlignment(TEXT_ALIGN_CENTER);
+    gfx->setFont(ArialMT_Plain_16);
+    gfx->drawString(296 / 2, 20, "Error connecting to the server\nHTTP CODE: " + String(httpCode));
+    gfx->commit();
+    gfx->freeBuffer();
+    return false;
+  } else {
+    gfx->init();
+    gfx->fillBuffer(1);
+    gfx->setColor(0);
+    gfx->setTextAlignment(TEXT_ALIGN_CENTER);
+    gfx->setFont(ArialMT_Plain_16);
+    gfx->drawPalettedBitmapFromFile(0, 0, "/screen");
+    gfx->commit();
+    gfx->freeBuffer();
+  }
 }
 
 int EspaperParser::updateScreen(String baseUrl, String requestPath, String deviceSecret, String clientVersion) {
@@ -20,12 +51,14 @@ int EspaperParser::updateScreen(String baseUrl, String requestPath, String devic
   String url = baseUrl + requestPath;
   int httpCode = downloadResource(url, "request.json", 0);
   if (httpCode < 0 || httpCode != 200) {
+    gfx->init();
     gfx->fillBuffer(1);
     gfx->setColor(0);
     gfx->setTextAlignment(TEXT_ALIGN_CENTER);
     gfx->setFont(ArialMT_Plain_16);
     gfx->drawString(296 / 2, 20, "Error connecting to the server\nHTTP CODE: " + String(httpCode));
     gfx->commit();
+    gfx->freeBuffer();
     return false;
   }
 
@@ -352,31 +385,18 @@ int EspaperParser::downloadResource(String protocol, String host, uint16_t port,
 
   USE_SERIAL.print("[HTTP] begin...\n");
 
-  WiFiClientSecure client;
+  BearSSL::WiFiClientSecure client;
+  BearSSLX509List cert(this->rootCert);
+  client.setTrustAnchors(&cert);
 
-  if (this->rootCertLen > 0) {
-    USE_SERIAL.println("Loading root certificate");
-    bool res = client.setCACert_P(this->rootCert, this->rootCertLen);
-  
-    if (!res) {
-      Serial.println("Failed to load root CA certificate!");
-      while (true) {
-        yield();
-      }
-    }
-  }
+
+
   USE_SERIAL.printf("Connecting to %s:%d", host.c_str(), port);
-  if (!client.connect(host, port)) {
-    Serial.println("connection failed");
-    return -1;
+  client.connect(host, port);
+  if (!client.connected()) {
+    Serial.printf("*** Can't connect. ***\n-------\n");
+    return -2;
   }
-
-  /*if (this->rootCertLen > 0 && client.verifyCertChain(host.c_str())) {
-    Serial.println("Server certificate verified");
-  } else {
-    Serial.println("ERROR: certificate verification failed!");
-    return -1;
-  }*/
 
   String EOL = "\r\n";
 
@@ -396,10 +416,14 @@ int EspaperParser::downloadResource(String protocol, String host, uint16_t port,
   USE_SERIAL.println("Sending request: " +request);
   
   client.print(request);
+
+  long lastUpdate = millis();
+  
   int httpCode = 0;
-  while (client.connected()) {
+  while (client.available() || client.connected()) {
     String line = client.readStringUntil('\n');
     USE_SERIAL.println(line);
+ 
     if (line.startsWith("HTTP/1.")) {
       httpCode = line.substring(9, line.indexOf(' ', 9)).toInt();
       USE_SERIAL.printf("HTTP Code: %d\n", httpCode); 
@@ -408,7 +432,17 @@ int EspaperParser::downloadResource(String protocol, String host, uint16_t port,
       USE_SERIAL.println("headers received");
       break;
     }
+    if (millis() - lastUpdate > 500) {
+      lastUpdate = millis();
+      Serial.printf("-");
+    }
+    
   }
+
+  if (!client.available() == 0) {
+    Serial.println("Client disconnected before body parsing");
+  }
+  Serial.println("Processing body");
 
   long downloadedBytes = 0;
   if (httpCode > 0) {
@@ -426,28 +460,30 @@ int EspaperParser::downloadResource(String protocol, String host, uint16_t port,
       // create buffer for read
       uint8_t buff[128] = { 0 };
 
-
+      USE_SERIAL.println("Starting resource download");
       // read all data from server
-      long lastUpdate = millis();
-      while (client.connected()) {
-        // get available data size
-        size_t size = client.available();
 
-        if (size) {
-          // read up to 1024 byte
-          int c = client.readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
-          downloadedBytes += c;
-
-          file.write(buff, c);
-
-          /*if (len > 0) {
-            len -= c;
-          }*/
-        }
-        if (millis() - lastUpdate > 500) {
-          lastUpdate = millis();
-          //Serial.printf("Bytes left: %d. Available: %d\n", len, size);
-        }
+      while (client.available() || client.connected()) {
+          // get available data size
+          size_t size = client.available();
+  
+          if (size > 0) {
+            // read up to 1024 byte
+            int c = client.readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+            downloadedBytes += c;
+  
+            file.write(buff, c);
+            Serial.printf("%d\n", (int)downloadedBytes);
+  
+            /*if (len > 0) {
+              len -= c;
+            }*/
+          }
+          if (millis() - lastUpdate > 500) {
+            lastUpdate = millis();
+            Serial.printf("Bytes downloaded: %d\n", downloadedBytes);
+          }
+        
       }
       file.close();
       client.stop();
@@ -466,7 +502,8 @@ int EspaperParser::downloadResource(String protocol, String host, uint16_t port,
     //USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
     return httpCode;//httpCode;
   }
-  
+
+  client.stop();
   return -2;
 
 }

@@ -1,6 +1,6 @@
 
-//#define EPD42
-#define EPD29
+#define EPD42
+//#define EPD29
 
 extern "C" {
   #include "user_interface.h"  // Required for wifi_station_connect() to work
@@ -15,7 +15,7 @@ extern "C" {
 #ifdef EPD42
   #include <EPD_WaveShare_42.h>
 #endif
-//#include <EPD_WaveShare_75.h>
+
 #include "settings.h"
 #include "configportal.h"
 #include "EspaperParser.h"
@@ -25,10 +25,6 @@ extern "C" {
 
 uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
 
-//#define SCREEN_HEIGHT 128
-//#define SCREEN_WIDTH 296
-//#define SCREEN_HEIGHT 300
-//#define SCREEN_WIDTH 400
 #define BITS_PER_PIXEL 1
 #define USE_SERIAL Serial
 
@@ -38,22 +34,23 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
 #endif
 #ifdef EPD42
   EPD_WaveShare42 epd(CS, RST, DC, BUSY);
-  #define DEVICE_ROTATION 0
+  #define DEVICE_ROTATION 2
 #endif
-//
 
-//EPD_WaveShare75 epd(CS, RST, DC, BUSY);
+
 MiniGrafx gfx = MiniGrafx(&epd, BITS_PER_PIXEL, palette);
 
 EspaperParser parser(&gfx);
 
 void showMessage(String message) {
+  gfx.init();
   gfx.fillBuffer(1);
   gfx.setColor(0);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setFont(ArialMT_Plain_16);
-  gfx.drawString(296 / 2, 20, message);
+  gfx.drawString(gfx.getWidth() / 2, 20, message);
   gfx.commit();
+  gfx.freeBuffer();
 }
 
 boolean connectWiFi() {
@@ -85,8 +82,13 @@ boolean connectWiFi() {
   Serial.print("[");
   Serial.print(WIFI_PASS.c_str());
   Serial.print("]");
-  
-  WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
+
+  if (WIFI_PASS == NULL || WIFI_PASS == "" || WIFI_PASS.length() == 0) {
+    Serial.println("Only SSID without password");
+    WiFi.begin(WIFI_SSID.c_str());
+  } else {
+    WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
+  }
 
   int i = 0;
   uint32_t startTime = millis();
@@ -109,6 +111,11 @@ boolean connectWiFi() {
       Serial.print(".");
       now = time(nullptr);
     }
+    Serial.println("");
+    struct tm timeinfo;
+    gmtime_r(&now, &timeinfo);
+    Serial.print("Current time: ");
+    Serial.print(asctime(&timeinfo));
     Serial.println("Time Sync'ed");
   //#endif 
 
@@ -137,10 +144,9 @@ void setup() {
   //WiFi.forceSleepBegin();
   //delay( 1 );
 
-
+  Serial.println(ESP.getFreeHeap());
   Serial.println("Wake up!");
-  gfx.init();
-  Serial.println("After gfx init");
+  
   gfx.setRotation(DEVICE_ROTATION);
   gfx.setFastRefresh(false);
   
@@ -154,10 +160,12 @@ void setup() {
   }
   boolean isConfigLoaded = loadConfig();
 
+  Serial.println(ESP.getFreeHeap());
   #ifndef DEV_ENV 
-    parser.setRootCertificate(ROOT_CERT, ROOT_CERT_LEN);
+    parser.setRootCertificate(rootCaCert);
   #endif
-  
+
+  Serial.println(ESP.getFreeHeap());
   Serial.println("State: " + String(btnState));
   if (btnState == LOW || !isConfigLoaded) {
     startConfigPortal(&gfx);
@@ -166,7 +174,7 @@ void setup() {
     boolean success = connectWiFi();
     if (success) {
       Serial.printf("\n\n***Time before going to fetching data %d\n", millis());
-      parser.updateScreen(SERVER_URL, REQUEST_PATH + String(DEVICE_ID), String(DEVICE_KEY), String(CLIENT_VERSION));
+      parser.getAndDrawScreen(SERVER_URL, REQUEST_PATH + String(DEVICE_ID) + String("/screen"), String(DEVICE_KEY), String(CLIENT_VERSION));
     } else {
       showMessage("Could not connect to WiFi...");
     }
@@ -181,7 +189,7 @@ void loop() {
 #ifdef DEV_ENV
   boolean isPressed = !digitalRead(0);
   if (isPressed) {
-    parser.updateScreen(SERVER_URL, REQUEST_PATH + String(DEVICE_ID), String(DEVICE_KEY), String(CLIENT_VERSION));
+    parser.getAndDrawScreen(SERVER_URL, REQUEST_PATH + String(DEVICE_ID), String(DEVICE_KEY), String(CLIENT_VERSION));
   }
   delay(100);
 #endif

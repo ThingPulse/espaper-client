@@ -1,27 +1,36 @@
 /**The MIT License (MIT)
-Copyright (c) 2018 by Daniel Eichhorn
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-See more at http://blog.squix.ch
-*/
+
+ Copyright (c) 2018 by ThingPulse Ltd., https://thingpulse.com
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
+#pragma once
+
+//#define EPD29
+#define EPD42
+//#define EPD75
 
 #define CLIENT_VERSION "V010"
 
-//#define DEV_ENV
-#define TEST_ENV
+#define DEV_ENV
+//#define TEST_ENV
 
 // Config mode SSID
 const String CONFIG_SSID = "ESPaperConfig";
@@ -29,11 +38,13 @@ const String CONFIG_SSID = "ESPaperConfig";
 // Setup
 String WIFI_SSID = "";
 String WIFI_PASS = "";
+String TIMEZONE = "";
+String NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
 
 String DEVICE_ID = "";
-String DEVICE_KEY = "";
+String DEVICE_SECRET = "";
 
-const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes
+uint16_t UPDATE_INTERVAL_MINS = 20; // Update 20 minutes
 
 /*
  * BUSY---->gpio4 
@@ -67,20 +78,27 @@ const int UPDATE_INTERVAL_SECS = 20 * 60; // Update every 20 minutes
 #define BUSY 4 // D2
 #define USR_BTN 12 // D6
 
-#define NTP_SERVERS "0.ch.pool.ntp.org", "1.ch.pool.ntp.org", "2.ch.pool.ntp.org"
-// #define NTP_SERVERS "us.pool.ntp.org", "time.nist.gov", "pool.ntp.org"
+// August 1st, 2018
+#define NTP_MIN_VALID_EPOCH 1533081600
+#define NTP_SYNC_TIMEOUT_SECONDS 5
 
-const String REQUEST_PATH = "/public/devices/";
 
+#if defined(EPD29)
+const String SERVER_API_DEVICE_TYPE = "Espaper29Bw";
+#elif defined(EPD42)
+const String SERVER_API_DEVICE_TYPE = "Espaper42Bw";
+#elif defined(EPD75)
+const String SERVER_API_DEVICE_TYPE = "Espaper75Bw";
+#endif
+
+const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and\npress & release RIGHT button\nto enter configuration mode.";
+
+const String SERVER_API_DEVICES_PATH = "/public/devices";
 
 #ifdef DEV_ENV
-  const String SHA1_FINGERPRINT = "";
-  const String SERVER_URL = "http://192.168.0.121:8080";
-  const unsigned char ROOT_CERT[] PROGMEM = {};
-  uint16_t ROOT_CERT_LEN = 0;
-  
+  const String SERVER_URL = "http://192.168.0.37:8080";
 #else
-// exported from firefox as x509.pem format
+  // exported from firefox as x509.pem format
   static const char rootCaCert[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
 MIIDSjCCAjKgAwIBAgIQRK+wgNajJ7qJMDmGLvhAazANBgkqhkiG9w0BAQUFADA/
@@ -112,8 +130,9 @@ Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ
     #endif
 
 #endif
-
+bool isDeviceRegistered() {
+  return DEVICE_ID.length() != 0 && DEVICE_SECRET.length() != 0;
+}
 /***************************
  * End Settings
  **************************/
-

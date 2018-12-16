@@ -27,6 +27,7 @@
 #include <MiniGrafx.h>
 #include "artwork.h"
 #include "timezones.h"
+#include "settings.h"
 
 const char HTTP_HEAD[] PROGMEM            = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/><title>{v}</title>"; // <link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/favicon.png\">
 const char HTTP_STYLE[] PROGMEM           = "<style>div,input, select{padding:5px;font-size:1em;} input, select{width:95%;} body{text-align: center;font-family:verdana;} button{border:0;border-radius:0.3rem;background-color:#1fa3ec;color:#fff;line-height:2.4rem;font-size:1.2rem;width:100%;}</style>";
@@ -310,32 +311,28 @@ void startConfigPortal(MiniGrafx *gfx) {
   server.onNotFound ( handleNotFound );
   server.begin();
 
-  boolean connected = WiFi.status() == WL_CONNECTED;
+  gfx->init();  
   gfx->fillBuffer(1);
+  gfx->drawPalettedBitmapFromPgm(0, 10, ThingPulse_logo_bin);
   gfx->setColor(0);
   gfx->setTextAlignment(TEXT_ALIGN_CENTER);
   gfx->setFont(ArialMT_Plain_16);
+
+  boolean connected = WiFi.status() == WL_CONNECTED;
   Serial.printf("Is WiFi conected: %s\n", connected ? "yes" : "no");
-
-  // TODO draw TP logo
-
-  // TODO currently none of the two gfx->drawString messages is showing
   if (connected) {
-    Serial.println ( "Open browser at http://" + WiFi.localIP() );
-
-    gfx->drawString(296 / 2, 10, "ESPaper Setup Mode\nConnected to: " + WiFi.SSID() + "\nOpen browser at\nhttp://" + WiFi.localIP().toString());
-
+    Serial.println ("Open browser at http://" + WiFi.localIP());
+    gfx->drawString(200, 195, "ESPaper Setup Mode\nConnected to: " + WiFi.SSID() + "\nOpen browser at http://" + WiFi.localIP().toString());
   } else {
     WiFi.mode(WIFI_AP);
     WiFi.softAP(CONFIG_SSID.c_str());
-    IPAddress myIP = WiFi.softAPIP();
-    Serial.println(myIP);
-    
-    gfx->drawString(296 / 2, 10, "ESPaper Setup Mode\nConnect WiFi to:\n" + CONFIG_SSID + "\nOpen browser at\nhttp://" + myIP.toString());
-
+    // TODO should use DEVICE_SCREEN_WIDTH / 2 but DEVICE_SCREEN_WIDTH has obscure value 144 here, why?
+    // TODO as with every drawString the y-position and the line break position is dependent on the device type
+    gfx->drawString(200, 195, "ESPaper Setup Mode\nConnect WiFi to: " + CONFIG_SSID + "\nOpen browser at http://" + WiFi.softAPIP().toString());
   }
   Serial.println("Committing.. screen");
   gfx->commit();
+  gfx->freeBuffer();
 
   Serial.println ( "HTTP server started" );
 

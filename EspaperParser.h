@@ -33,10 +33,7 @@ class EspaperParser {
 
   private:
     MiniGrafx *gfx;
-
-    TEXT_ALIGNMENT textAlignment = TEXT_ALIGN_LEFT;
-    boolean isPgmFont = true;
-    const char *fontData = ArialMT_Plain_10;
+    uint8_t screenWidth;
     const char *rootCert;
     String baseUrl;
     String requestPath;
@@ -60,7 +57,7 @@ class EspaperParser {
       String deviceSecret;
     } DeviceIdAndSecret;
   
-    EspaperParser(MiniGrafx *gfx, String baseUrl, String deviceSecret, String clientVersion);
+    EspaperParser(MiniGrafx *gfx, uint8_t screenWidth, String baseUrl, String deviceSecret, String clientVersion);
 
     void setRootCertificate(const char *rootCertificate);
     

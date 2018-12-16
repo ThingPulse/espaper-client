@@ -85,10 +85,16 @@ uint16_t UPDATE_INTERVAL_MINS = 20; // Update 20 minutes
 
 #if defined(EPD29)
 const String SERVER_API_DEVICE_TYPE = "Espaper29Bw";
+const uint8_t DEVICE_SCREEN_WIDTH = 296;
+const uint8_t DEVICE_SCREEN_HEIGHT = 128;
 #elif defined(EPD42)
 const String SERVER_API_DEVICE_TYPE = "Espaper42Bw";
+const uint8_t DEVICE_SCREEN_WIDTH = 400;
+const uint8_t DEVICE_SCREEN_HEIGHT = 300;
 #elif defined(EPD75)
 const String SERVER_API_DEVICE_TYPE = "Espaper75Bw";
+const uint8_t DEVICE_SCREEN_WIDTH = 640;
+const uint8_t DEVICE_SCREEN_HEIGHT = 384;
 #endif
 
 const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and\npress & release RIGHT button\nto enter configuration mode.";

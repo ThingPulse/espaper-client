@@ -60,7 +60,7 @@ MiniGrafx gfx = MiniGrafx(&epd, BITS_PER_PIXEL, palette);
 void showMessage(String message) {
   gfx.init();
   gfx.fillBuffer(1);
-  gfx.setColor(0);
+  gfx.setColor(MINI_BLACK);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setFont(ArialMT_Plain_16);
   gfx.drawString(gfx.getWidth() / 2, 20, message);
@@ -198,7 +198,7 @@ void setup() {
     if (success) {
       boolean timeInit = initTime();
       if (timeInit) {
-        EspaperParser parser(&gfx, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
+        EspaperParser parser(&gfx, DEVICE_SCREEN_WIDTH, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
         #ifndef DEV_ENV 
         parser.setRootCertificate(rootCaCert);
         #endif
@@ -239,7 +239,7 @@ void loop() {
 #ifdef DEV_ENV
   boolean isPressed = !digitalRead(0);
   if (isPressed) {
-    EspaperParser parser(&gfx, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
+    EspaperParser parser(&gfx, DEVICE_SCREEN_WIDTH, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
     parser.getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID);
   }
   delay(100);

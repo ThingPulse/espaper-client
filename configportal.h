@@ -29,6 +29,8 @@
 #include "timezones.h"
 #include "settings.h"
 
+const String CONFIG_FILE = "/espaper.txt";
+
 const char HTTP_HEAD[] PROGMEM            = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/><title>{v}</title>"; // <link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/favicon.png\">
 const char HTTP_STYLE[] PROGMEM           = "<style>div,input, select{padding:5px;font-size:1em;} input, select{width:95%;} body{text-align: center;font-family:verdana;} button{border:0;border-radius:0.3rem;background-color:#1fa3ec;color:#fff;line-height:2.4rem;font-size:1.2rem;width:100%;}</style>";
 const char HTTP_SCRIPT[] PROGMEM          = "<script>"
@@ -92,7 +94,7 @@ String getFormField(String id, String placeholder, String length, String value, 
 
 
 boolean saveConfig() {
-  File f = SPIFFS.open("/espaper.txt", "w+");
+  File f = SPIFFS.open(CONFIG_FILE, "w+");
   if (!f) {
     Serial.println("Failed to open config file");
     return false;
@@ -117,7 +119,7 @@ boolean saveConfig() {
 }
 
 boolean loadConfig() {
-  File f = SPIFFS.open("/espaper.txt", "r");
+  File f = SPIFFS.open(CONFIG_FILE, "r");
   if (!f) {
     Serial.println("Failed to open config file");
     return false;
@@ -273,10 +275,7 @@ void handleNotFound() {
   server.send ( 404, "text/plain", message );
 }
 
-
-
-void startConfigPortal(MiniGrafx *gfx) {
-  Serial.println("Starting config portal...");
+void registerServerCallbackHandlers() {
   server.on ( "/", handleRoot );
   server.on ( "/logo.svg", []() {
     Serial.println("Serving /logo.svg");
@@ -308,33 +307,43 @@ void startConfigPortal(MiniGrafx *gfx) {
     pinMode(0, INPUT);
     ESP.restart();
   } );
-  server.onNotFound ( handleNotFound );
-  server.begin();
+  server.onNotFound(handleNotFound);  
+}
+
+void startConfigPortal(MiniGrafx *gfx) {
+  Serial.println("Starting config portal...");
+
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(CONFIG_SSID.c_str());
 
   gfx->init();  
   gfx->fillBuffer(1);
-  gfx->drawPalettedBitmapFromPgm(0, 10, ThingPulse_logo_bin);
+  gfx->drawPalettedBitmapFromPgm(0, 0, boot_screen);
   gfx->setColor(0);
   gfx->setTextAlignment(TEXT_ALIGN_CENTER);
-  gfx->setFont(ArialMT_Plain_16);
 
-  boolean connected = WiFi.status() == WL_CONNECTED;
-  Serial.printf("Is WiFi conected: %s\n", connected ? "yes" : "no");
-  if (connected) {
-    Serial.println ("Open browser at http://" + WiFi.localIP());
-    gfx->drawString(200, 195, "ESPaper Setup Mode\nConnected to: " + WiFi.SSID() + "\nOpen browser at http://" + WiFi.localIP().toString());
-  } else {
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(CONFIG_SSID.c_str());
+  File f = SPIFFS.open(CONFIG_FILE, "r");
+  if (f) {
+    Serial.println("Configuration file present -> assume user manually started config portal");
+    gfx->setFont(ArialMT_Plain_16);
     // TODO should use DEVICE_SCREEN_WIDTH / 2 but DEVICE_SCREEN_WIDTH has obscure value 144 here, why?
     // TODO as with every drawString the y-position and the line break position is dependent on the device type
-    gfx->drawString(200, 195, "ESPaper Setup Mode\nConnect WiFi to: " + CONFIG_SSID + "\nOpen browser at http://" + WiFi.softAPIP().toString());
+    gfx->drawString(200, 180, "ESPaper Configuration Mode\nJoin WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+  } else {
+    Serial.println("Configuration file doesn't exist or is not readable -> assume virgin device");
+    gfx->setFont(ArialMT_Plain_24);
+    gfx->drawString(200, 172, "ESPaper Initial Setup");
+    gfx->setFont(ArialMT_Plain_16);
+    gfx->drawString(200, 202, "Join WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
   }
-  Serial.println("Committing.. screen");
+  
+  Serial.println("Committing screen");
   gfx->commit();
   gfx->freeBuffer();
 
-  Serial.println ( "HTTP server started" );
+  registerServerCallbackHandlers();
+  server.begin();
+  Serial.println("HTTP server started");
 
   while (true) {
     server.handleClient();
@@ -349,7 +358,6 @@ String getTimeZoneSettings() {
   }
   return TIMEZONE.substring(indexOfSeparator + 1);
 }
-
 
 String getTimeZoneName() {
   uint8_t indexOfSeparator = TIMEZONE.indexOf(" ");

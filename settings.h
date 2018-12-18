@@ -27,7 +27,7 @@
 #define EPD42
 //#define EPD75
 
-#define CLIENT_VERSION "V010"
+#define CLIENT_VERSION "V011"
 
 #define DEV_ENV
 //#define TEST_ENV

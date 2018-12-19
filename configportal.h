@@ -72,7 +72,7 @@ const char HTTP_SCRIPT[] PROGMEM          = "<script>"
 const char HTTP_HEAD_END[] PROGMEM        = "</head><body><div style='text-align:left;display:inline-block;min-width:260px;'>";
 const char HTTP_FORM_START[] PROGMEM      = "<form method='post' action='save'><br/>";
 const char HTTP_FORM_PARAM[] PROGMEM      = "<label for='{i}'>{p}</label><br/><input id='{i}' name='{n}' maxlength={l}  value='{v}' {c}><br/><br/>";
-const char HTTP_FORM_END[] PROGMEM        = "<br/><button type='submit'>save</button></form><br/><form action=\"/reset\" method=\"get\"><button>Restart ESP</button></form>";
+const char HTTP_FORM_END[] PROGMEM        = "<br/><button type='submit'>Save configuration</button></form><br/><form action=\"/delete\" method=\"get\"><button>Delete configuration & registration</button></form><br/><form action=\"/reset\" method=\"get\"><button>Restart ESPaper</button></form>";
 const char HTTP_SAVED[] PROGMEM           = "<div>Credentials Saved<br />Trying to connect ESP to network.<br />If it fails reconnect to AP to try again</div>";
 const char HTTP_END[] PROGMEM             = "</div></body></html>";
 const char HTTP_OPTION_ITEM[] PROGMEM     = "<option value=\"{v}\" {s}>{n}</option>";
@@ -240,7 +240,15 @@ void handleRoot() {
   server.client().stop();
 }
 
+void handleDelete() {
+  Serial.println("Handling 'delete' request");
+  SPIFFS.remove(CONFIG_FILE);
+  resetUserSettings();
+  handleRoot();
+}
+
 void handleSave() {
+  Serial.println("Handling 'save' request");
   WIFI_SSID = server.arg("ssid");
   WIFI_PASS = server.arg("password");
   UPDATE_INTERVAL_MINS = server.arg("updateIntervalMins").toInt();
@@ -256,7 +264,7 @@ void handleSave() {
 }
 
 void handleNotFound() {
-  //digitalWrite ( led, 1 );
+  Serial.println("Handling HTTP 404");
   String message = "File Not Found\n\n";
   message += "URI: ";
   message += server.uri();
@@ -270,12 +278,12 @@ void handleNotFound() {
     message += " " + server.argName ( i ) + ": " + server.arg ( i ) + "\n";
   }
 
-  server.send ( 404, "text/plain", message );
+  server.send(404, "text/plain", message);
 }
 
 void registerServerCallbackHandlers() {
-  server.on ( "/", handleRoot );
-  server.on ( "/logo.svg", []() {
+  server.on("/", handleRoot);
+  server.on("/logo.svg", []() {
     Serial.println("Serving /logo.svg");
     server.setContentLength(ThingPulse_svg_len);
     server.send(200, "image/svg+xml", "");
@@ -286,7 +294,7 @@ void registerServerCallbackHandlers() {
     server.sendContent("");
     server.client().stop();
   } );
-  server.on ( "/favicon.png", []() {
+  server.on("/favicon.png", []() {
     // TODO don't understand why this doesn't work :(
     Serial.println("Serving /favicon.png");
     server.setContentLength(favicon_png_len);
@@ -298,8 +306,9 @@ void registerServerCallbackHandlers() {
     server.sendContent("");
     server.client().stop();
   } );
-  server.on ( "/save", handleSave);
-  server.on ( "/reset", []() {
+  server.on("/save", handleSave);
+  server.on("/delete", handleDelete);
+  server.on("/reset", []() {
     saveConfig(); // TODO why saving (again)? Either call handleSave() to act as "save & reset" or omit.
     pinMode(2, INPUT);
     pinMode(0, INPUT);

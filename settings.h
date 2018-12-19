@@ -45,7 +45,7 @@ String NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
 String DEVICE_ID = "";
 String DEVICE_SECRET = "";
 
-uint16_t UPDATE_INTERVAL_MINS = 20;
+uint8_t UPDATE_INTERVAL_MINS = 20;
 
 
 /***************************
@@ -166,3 +166,14 @@ Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ
 bool isDeviceRegistered() {
   return DEVICE_ID.length() != 0 && DEVICE_SECRET.length() != 0;
 }
+
+void resetUserSettings() {
+  WIFI_SSID = "";
+  WIFI_PASS = "";
+  UPDATE_INTERVAL_MINS = 20;
+  TIMEZONE = "";
+  NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
+  DEVICE_ID = "";
+  DEVICE_SECRET = "";
+}
+  

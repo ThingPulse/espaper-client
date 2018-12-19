@@ -23,19 +23,20 @@
 
 #pragma once
 
+
+/***************************
+ * Device Type
+ **************************/
+
 //#define EPD29
 #define EPD42
 //#define EPD75
 
-#define CLIENT_VERSION "V011"
 
-#define DEV_ENV
-//#define TEST_ENV
+/***************************
+ * User Settings
+ **************************/
 
-// Config mode SSID
-const String CONFIG_SSID = "ESPaperConfig";
-
-// Setup
 String WIFI_SSID = "";
 String WIFI_PASS = "";
 String TIMEZONE = "";
@@ -44,44 +45,29 @@ String NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
 String DEVICE_ID = "";
 String DEVICE_SECRET = "";
 
-uint16_t UPDATE_INTERVAL_MINS = 20; // Update 20 minutes
+uint16_t UPDATE_INTERVAL_MINS = 20;
 
-/*
- * BUSY---->gpio4 
- * RST---->gpio2 
- * DC---->gpio5 
- * CS---->gpio15 
- * CLK---->gpio14 
- * DIN---->gpio13
- * Buttons : Reset ( RST pins on esp ) , 
- * Flash ( GPIO-0 10K pull up ) 
- * User button ( GPIO-12 10K pull up )
- */
- /*
- Connect the following pins:
- Display  NodeMCU
- BUSY     D1
- RST      D2
- DC       D8
- CS       D3
- CLK      D5
- DIN      D7
- GND      GND
- 3.3V     3V3
-*/
-/*
- * BUSY>gpio4 RST>gpio2 DC>gpio5 CS>gpio15 CLK>gpio14 DIN>gpio13
- */
-#define CS 15  // D8
-#define RST 2  // D4
-#define DC 5   // D1
-#define BUSY 4 // D2
-#define USR_BTN 12 // D6
+
+/***************************
+ * Internal Settings
+ **************************/
+
+#define CLIENT_VERSION "V011"
+
+#define DEV_ENV
+//#define TEST_ENV
+
+const String CONFIG_SSID = "ESPaperConfig";
+const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and\npress & release RIGHT button\nto enter configuration mode.";
 
 // August 1st, 2018
 #define NTP_MIN_VALID_EPOCH 1533081600
 #define NTP_SYNC_TIMEOUT_SECONDS 5
 
+
+/**********************************
+ * ESPaper Server-related Settings
+ *********************************/
 
 #if defined(EPD29)
 const String SERVER_API_DEVICE_TYPE = "Espaper29Bw";
@@ -96,8 +82,6 @@ const String SERVER_API_DEVICE_TYPE = "Espaper75Bw";
 const uint8_t DEVICE_SCREEN_WIDTH = 640;
 const uint8_t DEVICE_SCREEN_HEIGHT = 384;
 #endif
-
-const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and\npress & release RIGHT button\nto enter configuration mode.";
 
 const String SERVER_API_DEVICES_PATH = "/public/devices";
 
@@ -136,9 +120,49 @@ Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ
     #endif
 
 #endif
+
+
+/***************************
+ * Hardware Settings
+ **************************/
+
+/*
+ * BUSY---->gpio4 
+ * RST---->gpio2 
+ * DC---->gpio5 
+ * CS---->gpio15 
+ * CLK---->gpio14 
+ * DIN---->gpio13
+ * Buttons : Reset ( RST pins on esp ) , 
+ * Flash ( GPIO-0 10K pull up ) 
+ * User button ( GPIO-12 10K pull up )
+ */
+ /*
+ Connect the following pins:
+ Display  NodeMCU
+ BUSY     D1
+ RST      D2
+ DC       D8
+ CS       D3
+ CLK      D5
+ DIN      D7
+ GND      GND
+ 3.3V     3V3
+*/
+/*
+ * BUSY>gpio4 RST>gpio2 DC>gpio5 CS>gpio15 CLK>gpio14 DIN>gpio13
+ */
+#define CS 15  // D8
+#define RST 2  // D4
+#define DC 5   // D1
+#define BUSY 4 // D2
+#define USR_BTN 12 // D6
+
+
+/***************************
+ * Functions
+ **************************/
+
 bool isDeviceRegistered() {
   return DEVICE_ID.length() != 0 && DEVICE_SECRET.length() != 0;
 }
-/***************************
- * End Settings
- **************************/

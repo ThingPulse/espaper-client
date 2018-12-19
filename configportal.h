@@ -125,12 +125,10 @@ boolean loadConfig() {
     return false;
   }
   while (f.available()) {
-    //Lets read line by line from the file
     String key = f.readStringUntil('=');
     String value = f.readStringUntil('\r');
     f.read();
     Serial.println(key + " = [" + value + "]");
-    Serial.println(key.length());
     if (key == "WIFI_SSID") {
       WIFI_SSID = value;
     }
@@ -149,7 +147,7 @@ boolean loadConfig() {
     if (key == "DEVICE_ID") {
       DEVICE_ID = value;
     }
-    if (key == "DEVICE_SECRET") {
+    if (key == "DEVICE_SECRET" || key == "DEVICE_KEY") { // support pre-V011 clients
       DEVICE_SECRET = value;
     }
   }

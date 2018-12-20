@@ -28,8 +28,8 @@
  * Device Type
  **************************/
 
-//#define EPD29
-#define EPD42
+#define EPD29
+//#define EPD42
 //#define EPD75
 
 
@@ -71,16 +71,10 @@ const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and\npress & 
 
 #if defined(EPD29)
 const String SERVER_API_DEVICE_TYPE = "Espaper29Bw";
-const uint8_t DEVICE_SCREEN_WIDTH = 296;
-const uint8_t DEVICE_SCREEN_HEIGHT = 128;
 #elif defined(EPD42)
 const String SERVER_API_DEVICE_TYPE = "Espaper42Bw";
-const uint8_t DEVICE_SCREEN_WIDTH = 400;
-const uint8_t DEVICE_SCREEN_HEIGHT = 300;
 #elif defined(EPD75)
 const String SERVER_API_DEVICE_TYPE = "Espaper75Bw";
-const uint8_t DEVICE_SCREEN_WIDTH = 640;
-const uint8_t DEVICE_SCREEN_HEIGHT = 384;
 #endif
 
 const String SERVER_API_DEVICES_PATH = "/public/devices";

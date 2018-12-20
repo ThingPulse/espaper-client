@@ -152,7 +152,7 @@ boolean loadConfig() {
     }
   }
   if (WIFI_SSID == "" || WIFI_PASS == "" || TIMEZONE == "") {
-    Serial.println("At least one configuration proptery not yet defined");
+    Serial.println("At least one configuration property not yet defined");
     return false;
   }
   f.close();
@@ -309,7 +309,6 @@ void registerServerCallbackHandlers() {
   server.on("/save", handleSave);
   server.on("/delete", handleDelete);
   server.on("/reset", []() {
-    saveConfig(); // TODO why saving (again)? Either call handleSave() to act as "save & reset" or omit.
     pinMode(2, INPUT);
     pinMode(0, INPUT);
     ESP.restart();
@@ -330,18 +329,31 @@ void startConfigPortal(MiniGrafx *gfx) {
   gfx->setTextAlignment(TEXT_ALIGN_CENTER);
 
   File f = SPIFFS.open(CONFIG_FILE, "r");
+  uint8_t halfWidth = gfx->getWidth() / 2;
   if (f) {
     Serial.println("Configuration file present -> assume user manually started config portal");
+    #ifdef EPD29
+      uint8_t yPosition = 39;
+    #endif
+    #ifdef EPD42
+      uint8_t yPosition = 180;
+    #endif
     gfx->setFont(ArialMT_Plain_16);
-    // TODO should use DEVICE_SCREEN_WIDTH / 2 but DEVICE_SCREEN_WIDTH has obscure value 144 here, why?
     // TODO as with every drawString the y-position and the line break position is dependent on the device type
-    gfx->drawString(200, 180, "ESPaper Configuration Mode\nJoin WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+    // currently just happens to work for both 2.9'' and 4.2''
+    gfx->drawString(halfWidth, yPosition, "ESPaper Configuration Mode\nJoin WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
   } else {
     Serial.println("Configuration file doesn't exist or is not readable -> assume virgin device");
-    gfx->setFont(ArialMT_Plain_24);
-    gfx->drawString(200, 172, "ESPaper Initial Setup");
-    gfx->setFont(ArialMT_Plain_16);
-    gfx->drawString(200, 202, "Join WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+    #ifdef EPD29
+      gfx->setFont(ArialMT_Plain_16);
+      gfx->drawString(halfWidth, 39, "ESPaper Initial Setup\nJoin WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+    #endif
+    #ifdef EPD42
+      gfx->setFont(ArialMT_Plain_24);
+      gfx->drawString(halfWidth, 172, "ESPaper Initial Setup");
+      gfx->setFont(ArialMT_Plain_16);
+      gfx->drawString(halfWidth, 202, "Join WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+    #endif
   }
   
   Serial.println("Committing screen");

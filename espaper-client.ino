@@ -198,7 +198,7 @@ void setup() {
     if (success) {
       boolean timeInit = initTime();
       if (timeInit) {
-        EspaperParser parser(&gfx, DEVICE_SCREEN_WIDTH, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
+        EspaperParser parser(&gfx, gfx.getWidth(), SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
         #ifndef DEV_ENV 
         parser.setRootCertificate(rootCaCert);
         #endif
@@ -209,6 +209,7 @@ void setup() {
           Serial.println("Device id and/or secret are not set yet -> registering device with server now");
           EspaperParser::DeviceIdAndSecret d = parser.registerDevice(SERVER_API_DEVICES_PATH, buildRegistrationRequestBody());
           if (d.deviceId == "-1") {
+            // TODO modify for 2.9'' to fit screen
             showMessage("Sorry, device registration failed.\nPlease ensure the device has access to\n" + 
                         SERVER_URL + 
                         "\nand try again. Else contact ThingPulse Support and\n" + 
@@ -223,9 +224,11 @@ void setup() {
           }
         }
       } else {
+        // TODO test on 2.9''
         showMessage("Failed to update time from internet (NTP).\nPlease retry then verify your settings.\n" + CONFIG_MODE_INSTRUCTION);
       }
     } else {
+      // TODO test on 2.9''
       showMessage("Failed to connect to WiFi '" + WIFI_SSID + "'.\nPlease retry then verify your settings.\n" + CONFIG_MODE_INSTRUCTION);
     }
 
@@ -239,7 +242,7 @@ void loop() {
 #ifdef DEV_ENV
   boolean isPressed = !digitalRead(0);
   if (isPressed) {
-    EspaperParser parser(&gfx, DEVICE_SCREEN_WIDTH, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
+    EspaperParser parser(&gfx, gfx.getWidth(), SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
     parser.getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID);
   }
   delay(100);

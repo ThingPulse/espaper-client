@@ -68,7 +68,7 @@ void showMessage(String message) {
   gfx.freeBuffer();
 }
 
-boolean connectWiFi() {
+boolean connectWifi() {
   // Wake up WiFi
   wifi_fpm_do_wakeup();
   wifi_fpm_close();
@@ -167,15 +167,23 @@ void sleep() {
   ESP.deepSleep(UPDATE_INTERVAL_MINS * 60 * 1000000, WAKE_RF_DEFAULT );
 }
 
+void sleepWifi() {
+  Serial.println("Putting WiFi to sleep");
+  WiFi.mode(WIFI_OFF);
+  WiFi.forceSleepBegin();
+  delay(1);
+}
+
+void fetchAndDrawScreen(EspaperParser *parser) {
+  parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", sleepWifi);
+}
+
 void setup() {
   Serial.begin(115200);
   // Turn of WiFi until we need it
-  //WiFi.mode( WIFI_OFF );
-  //WiFi.forceSleepBegin();
-  //delay( 1 );
+  sleepWifi();
 
-  Serial.println(ESP.getFreeHeap());
-  Serial.println("Wake up!");
+  Serial.println("Current free heap: " + ESP.getFreeHeap());
   
   gfx.setRotation(DEVICE_ROTATION);
   gfx.setFastRefresh(false);
@@ -194,7 +202,7 @@ void setup() {
     startConfigPortal(&gfx);
   } else {
     Serial.printf("\n\n***Time before connecting to WiFi %d\n", millis());
-    boolean success = connectWiFi();
+    boolean success = connectWifi();
     if (success) {
       boolean timeInit = initTime();
       if (timeInit) {
@@ -204,7 +212,7 @@ void setup() {
         #endif
         Serial.printf("\n\n***Time before going to fetching data %d\n", millis());
         if (isDeviceRegistered()) {
-          parser.getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen");
+          fetchAndDrawScreen(&parser);
         } else {
           Serial.println("Device id and/or secret are not set yet -> registering device with server now");
           EspaperParser::DeviceIdAndSecret d = parser.registerDevice(SERVER_API_DEVICES_PATH, buildRegistrationRequestBody());
@@ -220,7 +228,7 @@ void setup() {
             DEVICE_SECRET = d.deviceSecret;
             saveConfig();
             parser.setDeviceSecret(DEVICE_SECRET);
-            parser.getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen");
+            fetchAndDrawScreen(&parser);
           }
         }
       } else {
@@ -243,7 +251,7 @@ void loop() {
   boolean isPressed = !digitalRead(0);
   if (isPressed) {
     EspaperParser parser(&gfx, gfx.getWidth(), SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
-    parser.getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID);
+    fetchAndDrawScreen(&parser);
   }
   delay(100);
 #endif

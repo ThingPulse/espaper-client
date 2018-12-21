@@ -52,6 +52,8 @@ class EspaperParser {
     WiFiClient createWifiClient(String protocol);
 
   public:
+    typedef std::function<void(void)> HandlerFunction;
+
     typedef struct DeviceIdAndSecret {
       String deviceId;
       String deviceSecret;
@@ -65,5 +67,5 @@ class EspaperParser {
     
     DeviceIdAndSecret registerDevice(String requestPath, String jsonData);
   
-    int getAndDrawScreen(String requestPath);
+    int getAndDrawScreen(String requestPath, HandlerFunction downloadCompletedFunction);
 };

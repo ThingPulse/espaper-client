@@ -109,10 +109,11 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
   return result;
 }
 
-int EspaperParser::getAndDrawScreen(String requestPath) {
+int EspaperParser::getAndDrawScreen(String requestPath, EspaperParser::HandlerFunction downloadCompletedFunction) {
 
   String url = this->baseUrl + requestPath;
   int httpCode = downloadResource(this->dissectUrl(url), "/screen", 0);
+  downloadCompletedFunction();
   if (httpCode < 0 || httpCode != 200) {
     gfx->init();
     gfx->fillBuffer(1);

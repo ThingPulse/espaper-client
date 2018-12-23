@@ -58,12 +58,19 @@ uint8_t UPDATE_INTERVAL_MINS = 20;
 //#define TEST_ENV
 
 const String CONFIG_SSID = "ESPaperConfig";
-const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and\npress & release RIGHT button\nto enter configuration mode.";
+const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & release RIGHT button to enter configuration mode.";
 
 // August 1st, 2018
 #define NTP_MIN_VALID_EPOCH 1533081600
 #define NTP_SYNC_TIMEOUT_SECONDS 5
 
+#ifdef EPD29
+const float MAX_TEXT_WIDTH_FACTOR = 0.95;
+const uint8_t STD_MESSAGE_Y_POSITION = 12;
+#else
+const float MAX_TEXT_WIDTH_FACTOR = 0.85;
+const uint8_t STD_MESSAGE_Y_POSITION = 25;
+#endif
 
 /**********************************
  * ESPaper Server-related Settings

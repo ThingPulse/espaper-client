@@ -63,7 +63,7 @@ void showMessage(String message) {
   gfx.setColor(MINI_BLACK);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setFont(ArialMT_Plain_16);
-  gfx.drawString(gfx.getWidth() / 2, 20, message);
+  gfx.drawStringMaxWidth(gfx.getWidth() / 2, STD_MESSAGE_Y_POSITION, gfx.getWidth() * MAX_TEXT_WIDTH_FACTOR, message);
   gfx.commit();
   gfx.freeBuffer();
 }
@@ -83,7 +83,6 @@ boolean connectWifi() {
 
   if (WiFi.status() == WL_CONNECTED) return true;
 
-  
   // this 3 lines for a fix IP-address (and faster connection)
   /*IPAddress ip(192, 168, 0, 60); 
   IPAddress gateway(192, 168, 0, 1);
@@ -91,14 +90,7 @@ boolean connectWifi() {
   IPAddress dns(8, 8, 8, 8);
   WiFi.config (ip, gateway, subnet, dns);*/
   
-  Serial.print("[");
-  Serial.print(WIFI_SSID.c_str());
-  Serial.print("]");
-  Serial.print("[");
-  Serial.print(WIFI_PASS.c_str());
-  Serial.print("]");
-
-  if (WIFI_PASS == NULL || WIFI_PASS == "") {
+  if (WIFI_PASS == "") {
     Serial.println("Only SSID without password");
     WiFi.begin(WIFI_SSID.c_str());
   } else {
@@ -107,11 +99,12 @@ boolean connectWifi() {
 
   int i = 0;
   uint32_t startTime = millis();
+  Serial.print("WiFi connect");
   while (WiFi.status() != WL_CONNECTED) {
-    delay(50);
+    delay(300);
     i++;
     if (millis() - startTime > 20000) {
-      Serial.println("Could not connect to WiFi");
+      Serial.println("\nFailed to connect to WiFi");
       return false;
     }
     Serial.print(".");
@@ -122,6 +115,7 @@ boolean connectWifi() {
 
 bool initTime() {
   //#ifndef DEV_ENV
+  Serial.print("NTP sync");
   String timezoneCode = getTimeZoneSettings();
   configTime(0, 0, getNtpServer(0).c_str(), getNtpServer(1).c_str(), getNtpServer(2).c_str());
   setenv("TZ", timezoneCode.c_str(), 0);
@@ -135,7 +129,7 @@ bool initTime() {
   while((now = time(nullptr)) < NTP_MIN_VALID_EPOCH) {
     uint32_t runtimeMillis = millis() - startTime;
     if (runtimeMillis > ntpTimeoutMillis) {
-      Serial.printf("Could not sync time through NTP. Giving up after %dms.\n", runtimeMillis);
+      Serial.printf("\nFailed to sync time through NTP. Giving up after %dms.\n", runtimeMillis);
       return false;
     }
     Serial.print(".");
@@ -180,7 +174,9 @@ void fetchAndDrawScreen(EspaperParser *parser) {
 
 void setup() {
   Serial.begin(115200);
-  // Turn of WiFi until we need it
+  Serial.println();
+  Serial.println("Boot sequence arrived in setup()");
+  // Turn WiFi off until we really need it
   sleepWifi();
 
   Serial.println("Current free heap: " + ESP.getFreeHeap());
@@ -206,7 +202,7 @@ void setup() {
     if (success) {
       boolean timeInit = initTime();
       if (timeInit) {
-        EspaperParser parser(&gfx, gfx.getWidth(), SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
+        EspaperParser parser(&gfx, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
         #ifndef DEV_ENV 
         parser.setRootCertificate(rootCaCert);
         #endif
@@ -217,13 +213,10 @@ void setup() {
           Serial.println("Device id and/or secret are not set yet -> registering device with server now");
           EspaperParser::DeviceIdAndSecret d = parser.registerDevice(SERVER_API_DEVICES_PATH, buildRegistrationRequestBody());
           if (d.deviceId == "-1") {
-            // TODO modify for 2.9'' to fit screen
-            showMessage("Sorry, device registration failed.\nPlease ensure the device has access to\n" + 
-                        SERVER_URL + 
-                        "\nand try again. Else contact ThingPulse Support and\n" + 
-                        "provide the device MAC address:\n" + 
-                        WiFi.macAddress());
+            Serial.println("Device registration failed");
+            showMessage("Sorry, device registration failed. Please ensure the device has access to " +  SERVER_URL + " and try again. Else contact ThingPulse Support and provide the device MAC address: " + WiFi.macAddress());
           } else {
+            Serial.println("Device registration successful, now fetching OTP screen");
             DEVICE_ID = d.deviceId;
             DEVICE_SECRET = d.deviceSecret;
             saveConfig();
@@ -232,12 +225,10 @@ void setup() {
           }
         }
       } else {
-        // TODO test on 2.9''
-        showMessage("Failed to update time from internet (NTP).\nPlease retry then verify your settings.\n" + CONFIG_MODE_INSTRUCTION);
+        showMessage("Failed to update time from internet (NTP). Please retry or verify your settings. " + CONFIG_MODE_INSTRUCTION);
       }
     } else {
-      // TODO test on 2.9''
-      showMessage("Failed to connect to WiFi '" + WIFI_SSID + "'.\nPlease retry then verify your settings.\n" + CONFIG_MODE_INSTRUCTION);
+      showMessage("Failed to connect to WiFi '" + WIFI_SSID + "'. Please retry or verify your settings. " + CONFIG_MODE_INSTRUCTION);
     }
 
     #ifndef DEV_ENV
@@ -250,7 +241,7 @@ void loop() {
 #ifdef DEV_ENV
   boolean isPressed = !digitalRead(0);
   if (isPressed) {
-    EspaperParser parser(&gfx, gfx.getWidth(), SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
+    EspaperParser parser(&gfx, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
     fetchAndDrawScreen(&parser);
   }
   delay(100);

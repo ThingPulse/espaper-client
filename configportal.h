@@ -68,11 +68,14 @@ const char HTTP_SCRIPT[] PROGMEM          = "<script>"
                                             "    }"
                                             "    document.getElementById('ntpServers').value = '0.' + base + ',' + '1.' + base + ',' + '2.' + base;"
                                             "}"
+                                            "function confirmDelete() {"
+                                            "    return confirm('Resetting the configuration will also delete the credentials with which the device authenticates against the ESPaper server. Your device will still be showing in the portal but it will no longer be able to connect. It has to be registered again after which you will see it as a new device on the server.');"
+                                            "}"
                                             "</script>";
 const char HTTP_HEAD_END[] PROGMEM        = "</head><body><div style='text-align:left;display:inline-block;min-width:260px;'>";
 const char HTTP_FORM_START[] PROGMEM      = "<form method='post' action='save'><br/>";
 const char HTTP_FORM_PARAM[] PROGMEM      = "<label for='{i}'>{p}</label><br/><input id='{i}' name='{n}' maxlength={l}  value='{v}' {c}><br/><br/>";
-const char HTTP_FORM_END[] PROGMEM        = "<br/><button type='submit'>Save configuration</button></form><br/><form action=\"/delete\" method=\"get\"><button>Delete configuration & registration</button></form><br/><form action=\"/reset\" method=\"get\"><button>Restart ESPaper</button></form>";
+const char HTTP_FORM_END[] PROGMEM        = "<br/><button type='submit'>Save Configuration</button></form><br/><form action=\"/delete\" method=\"get\" onsubmit=\"return confirmDelete();\"><button>Reset Firmware Settings</button></form><br/><form action=\"/reset\" method=\"get\"><button>Restart ESPaper</button></form>";
 const char HTTP_SAVED[] PROGMEM           = "<div>Credentials Saved<br />Trying to connect ESP to network.<br />If it fails reconnect to AP to try again</div>";
 const char HTTP_END[] PROGMEM             = "</div></body></html>";
 const char HTTP_OPTION_ITEM[] PROGMEM     = "<option value=\"{v}\" {s}>{n}</option>";
@@ -174,7 +177,7 @@ void handleRoot() {
   server.sendContent(FPSTR(HTTP_STYLE));
   server.sendContent(FPSTR(HTTP_HEAD_END));
   server.sendContent(FPSTR(HTTP_LOGO));
-  server.sendContent("<h1>ESPaper Calendar</h1>");
+  server.sendContent("<h1>ESPaper Configuration</h1>");
   server.sendContent("<h2>Device Information</h2>");
   server.sendContent("WiFi MAC address: ");
   server.sendContent(WiFi.macAddress());
@@ -184,7 +187,7 @@ void handleRoot() {
   server.sendContent(String(ESP.getChipId()));
   server.sendContent("<BR/>Flash Chip Size: ");
   server.sendContent(String(ESP.getFlashChipSize() / (1024 * 1024))); // no floating point required, it's always n MB
-  server.sendContent(" MB<h2>Configuration</h2>");
+  server.sendContent(" MB<h2>Settings</h2>");
   server.sendContent(FPSTR(HTTP_FORM_START));
   server.sendContent(getFormField("ssid", "WiFi SSID", "20", WIFI_SSID, ""));
   server.sendContent(getFormField("password", "WiFi Password", "32", WIFI_PASS, "type='password'"));
@@ -240,11 +243,22 @@ void handleRoot() {
   server.client().stop();
 }
 
+void sendRedirectToRoot() {
+  server.sendHeader("Location", "/");
+  server.send(303, "text/html", "");
+}
+
 void handleDelete() {
   Serial.println("Handling 'delete' request");
   SPIFFS.remove(CONFIG_FILE);
   resetUserSettings();
-  handleRoot();
+  sendRedirectToRoot();
+}
+
+void handleReset() {
+  pinMode(2, INPUT);
+  pinMode(0, INPUT);
+  ESP.restart();  
 }
 
 void handleSave() {
@@ -260,7 +274,7 @@ void handleSave() {
   Serial.println(TIMEZONE);
   Serial.println(NTP_SERVERS);
   saveConfig();
-  handleRoot();
+  sendRedirectToRoot();
 }
 
 void handleNotFound() {
@@ -308,12 +322,12 @@ void registerServerCallbackHandlers() {
   } );
   server.on("/save", handleSave);
   server.on("/delete", handleDelete);
-  server.on("/reset", []() {
-    pinMode(2, INPUT);
-    pinMode(0, INPUT);
-    ESP.restart();
-  } );
+  server.on("/reset", handleReset);
   server.onNotFound(handleNotFound);  
+}
+
+String getJoinWifiMessage() {
+  return "Join WiFi with SSID '" + CONFIG_SSID + "' then open browser at http://" + WiFi.softAPIP().toString();  
 }
 
 void startConfigPortal(MiniGrafx *gfx) {
@@ -329,7 +343,8 @@ void startConfigPortal(MiniGrafx *gfx) {
   gfx->setTextAlignment(TEXT_ALIGN_CENTER);
 
   File f = SPIFFS.open(CONFIG_FILE, "r");
-  uint8_t halfWidth = gfx->getWidth() / 2;
+  uint16_t halfWidth = gfx->getWidth() / 2;
+  uint16_t maxTextWidth = gfx->getWidth() * MAX_TEXT_WIDTH_FACTOR;
   if (f) {
     Serial.println("Configuration file present -> assume user manually started config portal");
     #ifdef EPD29
@@ -339,20 +354,20 @@ void startConfigPortal(MiniGrafx *gfx) {
       uint8_t yPosition = 180;
     #endif
     gfx->setFont(ArialMT_Plain_16);
-    // TODO as with every drawString the y-position and the line break position is dependent on the device type
-    // currently just happens to work for both 2.9'' and 4.2''
-    gfx->drawString(halfWidth, yPosition, "ESPaper Configuration Mode\nJoin WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+    gfx->drawString(halfWidth, yPosition, "ESPaper Configuration Mode");
+    gfx->drawStringMaxWidth(halfWidth, yPosition + 19, maxTextWidth, getJoinWifiMessage());
   } else {
     Serial.println("Configuration file doesn't exist or is not readable -> assume virgin device");
     #ifdef EPD29
       gfx->setFont(ArialMT_Plain_16);
-      gfx->drawString(halfWidth, 39, "ESPaper Initial Setup\nJoin WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+      gfx->drawString(halfWidth, 39, "ESPaper Initial Setup");
+      gfx->drawStringMaxWidth(halfWidth, 58, maxTextWidth, getJoinWifiMessage());
     #endif
     #ifdef EPD42
       gfx->setFont(ArialMT_Plain_24);
       gfx->drawString(halfWidth, 172, "ESPaper Initial Setup");
       gfx->setFont(ArialMT_Plain_16);
-      gfx->drawString(halfWidth, 202, "Join WiFi with SSID '" + CONFIG_SSID + "'\nOpen browser at http://" + WiFi.softAPIP().toString());
+      gfx->drawStringMaxWidth(halfWidth, 202, maxTextWidth, getJoinWifiMessage());
     #endif
   }
   

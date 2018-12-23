@@ -59,7 +59,7 @@ class EspaperParser {
       String deviceSecret;
     } DeviceIdAndSecret;
   
-    EspaperParser(MiniGrafx *gfx, uint8_t screenWidth, String baseUrl, String deviceSecret, String clientVersion);
+    EspaperParser(MiniGrafx *gfx, String baseUrl, String deviceSecret, String clientVersion);
 
     void setRootCertificate(const char *rootCertificate);
     

@@ -23,9 +23,8 @@
 
 #include "EspaperParser.h"
 
-EspaperParser::EspaperParser(MiniGrafx *gfx, uint8_t screenWidth, String baseUrl, String deviceSecret, String clientVersion) {
+EspaperParser::EspaperParser(MiniGrafx *gfx, String baseUrl, String deviceSecret, String clientVersion) {
   this->gfx = gfx;
-  this->screenWidth = screenWidth;
   this->baseUrl = baseUrl;
   this->deviceSecret = deviceSecret;
   this->clientVersion = clientVersion;
@@ -120,16 +119,13 @@ int EspaperParser::getAndDrawScreen(String requestPath, EspaperParser::HandlerFu
     gfx->setColor(0);
     gfx->setTextAlignment(TEXT_ALIGN_CENTER);
     gfx->setFont(ArialMT_Plain_16);
-    gfx->drawString(this->screenWidth / 2, 20, "Error connecting to the server\nHTTP CODE: " + String(httpCode));
+    gfx->drawString(gfx->getWidth() / 2, 20, "Error connecting to the server.\nHTTP status: " + String(httpCode));
     gfx->commit();
     gfx->freeBuffer();
     return false;
   } else {
     gfx->init();
     gfx->fillBuffer(1);
-    gfx->setColor(0);
-    gfx->setTextAlignment(TEXT_ALIGN_CENTER);
-    gfx->setFont(ArialMT_Plain_16);
     gfx->drawPalettedBitmapFromFile(0, 0, "/screen");
     gfx->commit();
     gfx->freeBuffer();

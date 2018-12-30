@@ -38,7 +38,7 @@ class EspaperParser {
     String requestPath;
     String deviceSecret;
     String clientVersion;
-    BearSSLX509List *cert;
+    BearSSLX509List *certList;
 
     typedef struct Url {
       String protocol;
@@ -59,11 +59,7 @@ class EspaperParser {
       String deviceSecret;
     } DeviceIdAndSecret;
   
-    EspaperParser(MiniGrafx *gfx, String baseUrl, String deviceSecret, String clientVersion);
-
-    void setRootCertificate(const char *rootCertificate);
-    
-    void setDeviceSecret(String deviceSecret);
+    EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion);
     
     DeviceIdAndSecret registerDevice(String requestPath, String jsonData);
   

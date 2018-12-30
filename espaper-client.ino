@@ -208,10 +208,7 @@ void setup() {
     if (success) {
       boolean timeInit = initTime();
       if (timeInit) {
-        EspaperParser parser(&gfx, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
-        #ifndef DEV_ENV 
-        parser.setRootCertificate(rootCaCert);
-        #endif
+        EspaperParser parser(&gfx, rootCaCert, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
         Serial.printf("\n\n***Time before going to fetching data %d\n", millis());
         if (isDeviceRegistered()) {
           fetchAndDrawScreen(&parser);
@@ -227,7 +224,6 @@ void setup() {
             DEVICE_ID = d.deviceId;
             DEVICE_SECRET = d.deviceSecret;
             saveConfig();
-            parser.setDeviceSecret(DEVICE_SECRET);
             fetchAndDrawScreen(&parser);
           }
         }
@@ -248,7 +244,7 @@ void loop() {
 #ifdef DEV_ENV
   boolean isPressed = !digitalRead(0);
   if (isPressed) {
-    EspaperParser parser(&gfx, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
+    EspaperParser parser(&gfx, rootCaCert, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
     fetchAndDrawScreen(&parser);
   }
   delay(100);

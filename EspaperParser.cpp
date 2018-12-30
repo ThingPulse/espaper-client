@@ -23,19 +23,12 @@
 
 #include "EspaperParser.h"
 
-EspaperParser::EspaperParser(MiniGrafx *gfx, String baseUrl, String deviceSecret, String clientVersion) {
+EspaperParser::EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion) {
   this->gfx = gfx;
+  this->certList = new BearSSLX509List(rootCertificate);
   this->baseUrl = baseUrl;
   this->deviceSecret = deviceSecret;
   this->clientVersion = clientVersion;
-}
-
-void EspaperParser::setRootCertificate(const char *rootCertificate) {
-  this->cert = new BearSSLX509List(rootCertificate);
-}
-
-void EspaperParser::setDeviceSecret(String deviceSecret) {
-  this->deviceSecret = deviceSecret;  
 }
 
 EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPath, String jsonData) {
@@ -101,15 +94,18 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
       Serial.printf("HTTP Code: %d\n", httpCode);
     }
     if (key == "X-ESPAPER-SECRET") {
-      result.deviceSecret = line.substring(18, line.indexOf('\r'));
-      Serial.printf("DeviceSecret: [%s]\n", result.deviceSecret.c_str());
+      this->deviceSecret = line.substring(18, line.indexOf('\r'));
+      result.deviceSecret = this->deviceSecret;
     }
     if (key == "X-ESPAPER-DEVICE-ID") {
       result.deviceId = line.substring(21, line.indexOf('\r'));
-      Serial.printf("DeviceId: [%s]\n", result.deviceId.c_str());
     }
     if (line == "\r" || line == "\r\n") {
       Serial.println("headers received");
+      Serial.println("Parsed values:");
+      Serial.printf("- HTTP code: %d\n", httpCode);
+      Serial.printf("- Device id: %s\n", result.deviceId.c_str());
+      Serial.printf("- Device secret: %s\n", result.deviceSecret.c_str());
       break;
     }
     if (millis() - lastUpdate > 500) {
@@ -217,10 +213,10 @@ WiFiClient* EspaperParser::createWifiClient(String protocol) {
     return new WiFiClient();
   } else {
     Serial.println("Using secure WiFi client");
-    BearSSL::WiFiClientSecure *c = new BearSSL::WiFiClientSecure();
+    BearSSL::WiFiClientSecure *client = new BearSSL::WiFiClientSecure();
     Serial.println("[HTTP] configuring server root cert in client");
-    c->setTrustAnchors(this->cert);
-    return c;
+    client->setTrustAnchors(this->certList);
+    return client;
   }
 
 }
@@ -282,10 +278,10 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
 
     if (line.startsWith("HTTP/1.")) {
       httpCode = line.substring(9, line.indexOf(' ', 9)).toInt();
-      Serial.printf("HTTP Code: %d\n", httpCode);
     }
     if (line == "\r" || line == "\r\n") {
       Serial.println("headers received");
+      Serial.printf("Parsed HTTP code: %d\n", httpCode);
       break;
     }
     if (millis() - lastUpdate > 500) {

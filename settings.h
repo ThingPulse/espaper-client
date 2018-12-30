@@ -87,9 +87,12 @@ const String SERVER_API_DEVICE_TYPE = "Espaper75Bw";
 const String SERVER_API_DEVICES_PATH = "/public/devices";
 
 #ifdef DEV_ENV
+  // use empty array as a placeholder, as the scheme is HTTP rather 
+  // than HTTPS it won't actually be used, see EspaperParser::createWifiClient
+  static const char rootCaCert[] PROGMEM = {};
   const String SERVER_URL = "http://192.168.0.37:8080";
 #else
-  // exported from firefox as x509.pem format
+  // exported from Firefox as x509.pem format
   static const char rootCaCert[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
 MIIDSjCCAjKgAwIBAgIQRK+wgNajJ7qJMDmGLvhAazANBgkqhkiG9w0BAQUFADA/

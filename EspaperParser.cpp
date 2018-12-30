@@ -127,32 +127,37 @@ int EspaperParser::getAndDrawScreen(String requestPath, EspaperParser::HandlerFu
   String url = this->baseUrl + requestPath;
   int httpCode = downloadResource(this->dissectUrl(url), "/screen", 0);
   downloadCompletedFunction();
-  if (httpCode == 410) {
-    gfx->init();
-    gfx->fillBuffer(1);
-    gfx->setColor(0);
-    gfx->setTextAlignment(TEXT_ALIGN_CENTER);
-    gfx->setFont(ArialMT_Plain_16);
-    gfx->drawString(gfx->getWidth() / 2, 20, "The device seems to have been deleted on the server.\nStarting device claim.");
-    gfx->commit();
-    gfx->freeBuffer();
-  } else if (httpCode < 0 || httpCode != 200) {
-    gfx->init();
-    gfx->fillBuffer(1);
-    gfx->setColor(0);
-    gfx->setTextAlignment(TEXT_ALIGN_CENTER);
-    gfx->setFont(ArialMT_Plain_16);
-    gfx->drawString(gfx->getWidth() / 2, 20, "Error connecting to the server.\nHTTP status: " + String(httpCode));
-    gfx->commit();
-    gfx->freeBuffer();
-    return false;
-  } else {
-    gfx->init();
-    gfx->fillBuffer(1);
+
+  gfx->init();
+  gfx->fillBuffer(1);
+  
+  if (httpCode == 200) {
     gfx->drawPalettedBitmapFromFile(0, 0, "/screen");
-    gfx->commit();
-    gfx->freeBuffer();
+  } else {
+    uint16_t halfWidth = gfx->getWidth() / 2;
+    uint16_t maxTextWidth = gfx->getWidth() * 0.85;
+
+    gfx->setColor(0);
+    gfx->setTextAlignment(TEXT_ALIGN_CENTER);
+    gfx->setFont(ArialMT_Plain_16);
+    
+    String message = "";
+    switch(httpCode) {
+      case -2:  message = "Connection to the server could not be established. Verify this device has access to the internet.";
+                break;
+                // TODO: "Starting registration process." is not correct, this parser can't possibly know that...
+      case 410: message = "This device is unknown to the server. It might have been deleted. Starting registration process.";
+                break;
+      default:  message = "Error communicating with the server. HTTP status: " + String(httpCode);
+                break;
+    }
+    
+    gfx->drawStringMaxWidth(halfWidth, 20, maxTextWidth, message);
   }
+  
+  gfx->commit();
+  gfx->freeBuffer();
+    
   return httpCode;
 }
 

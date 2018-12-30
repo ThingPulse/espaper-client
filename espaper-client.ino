@@ -210,6 +210,7 @@ void setup() {
         if (isDeviceRegistered()) {
           fetchAndDrawScreen(&parser);
         } else {
+          Serial.printf("Free mem: %d\n",  ESP.getFreeHeap());
           Serial.println("Device id and/or secret are not set yet -> registering device with server now");
           EspaperParser::DeviceIdAndSecret d = parser.registerDevice(SERVER_API_DEVICES_PATH, buildRegistrationRequestBody());
           if (d.deviceId == "-1") {

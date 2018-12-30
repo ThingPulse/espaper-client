@@ -31,7 +31,7 @@ EspaperParser::EspaperParser(MiniGrafx *gfx, String baseUrl, String deviceSecret
 }
 
 void EspaperParser::setRootCertificate(const char *rootCertificate) {
-  this->rootCert = rootCertificate;
+  this->cert = new BearSSLX509List(rootCertificate);
 }
 
 void EspaperParser::setDeviceSecret(String deviceSecret) {
@@ -45,14 +45,14 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
   result.deviceSecret = "-2";
   
   Url url = this->dissectUrl(this->baseUrl + requestPath);
-
-  WiFiClient client = this->createWifiClient(url.protocol);
+  Serial.printf("Free mem: %d",  ESP.getFreeHeap());
+  WiFiClient *client = this->createWifiClient(url.protocol);
 
   Serial.println("[HTTP] begin...");
 
   Serial.printf("Connecting to %s:%d\n", url.host.c_str(), url.port);
-  client.connect(url.host, url.port);
-  if (!client.connected()) {
+  client->connect(url.host, url.port);
+  if (!client->connected()) {
     Serial.println("*** Can't connect. ***\n-------");
     return result;
   }
@@ -71,24 +71,42 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
 
   Serial.println("Sending request: " + request);
 
-  client.print(request);
+  client->print(request);
+
+  unsigned long timeout = millis();
+  while (client->available() == 0) {
+    if (millis() - timeout > 10000) {
+      Serial.println(">>> Client Timeout !");
+      client->stop();
+      delete client;
+      return result;
+    }
+  }
 
   long lastUpdate = millis();
 
   int httpCode = 0;
-  while (client.available() || client.connected()) {
-    String line = client.readStringUntil('\n');
+  while (client->available() || client->connected()) {
+    String line = client->readStringUntil('\n');
+    int endOfKey = line.indexOf(':');
+    String key = "";
+    if (endOfKey > 0) {
+      key = line.substring(0, endOfKey);
+      key.toUpperCase();
+    }
     Serial.println(line);
 
     if (line.startsWith("HTTP/1.")) {
       httpCode = line.substring(9, line.indexOf(' ', 9)).toInt();
       Serial.printf("HTTP Code: %d\n", httpCode);
     }
-    if (line.startsWith("X-ESPAPER-SECRET")) {
+    if (key == "X-ESPAPER-SECRET") {
       result.deviceSecret = line.substring(18, line.indexOf('\r'));
+      Serial.printf("DeviceSecret: [%s]\n", result.deviceSecret.c_str());
     }
-    if (line.startsWith("X-ESPAPER-DEVICE-ID")) {
+    if (key == "X-ESPAPER-DEVICE-ID") {
       result.deviceId = line.substring(21, line.indexOf('\r'));
+      Serial.printf("DeviceId: [%s]\n", result.deviceId.c_str());
     }
     if (line == "\r" || line == "\r\n") {
       Serial.println("headers received");
@@ -101,10 +119,10 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
 
   }
 
-  if (!client.available() == 0) {
+  if (!client->available() == 0) {
     Serial.println("Client disconnected before body parsing");
   }
-
+  delete client;
   return result;
 }
 
@@ -179,29 +197,28 @@ EspaperParser::Url EspaperParser::dissectUrl(String url) {
   return result;
 }
 
-WiFiClient EspaperParser::createWifiClient(String protocol) {
+WiFiClient* EspaperParser::createWifiClient(String protocol) {
   // it would be correct to do this via
   // #ifdef DEV_ENV
   // as it's a compile-time configuration rather than a runtime configuration but including 
   // #include "settings.h" leads to odd compile errors
-  WiFiClient client;
   if (String("http").equals(protocol)) {
     Serial.println("Using non-secure WiFi client");
+    return new WiFiClient();
   } else {
     Serial.println("Using secure WiFi client");
-    BearSSL::WiFiClientSecure c;
+    BearSSL::WiFiClientSecure *c = new BearSSL::WiFiClientSecure();
     Serial.println("[HTTP] configuring server root cert in client");
-    BearSSLX509List cert(this->rootCert);
-    c.setTrustAnchors(&cert);
-    client = c;
+    c->setTrustAnchors(this->cert);
+    return c;
   }
-  return client;
+
 }
 
 int EspaperParser::downloadResource(Url url, String fileName, long expires) {
   Serial.printf("Protocol: %s\n Host: %s\n Port: %d\n URL: %s\n FileName: %s\n Expires: %d\n", url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str(), fileName.c_str(), expires);
 
-  WiFiClient client = this->createWifiClient(url.protocol);
+  WiFiClient *client = this->createWifiClient(url.protocol);
 
   FSInfo fs_info;
   SPIFFS.info(fs_info);
@@ -209,9 +226,11 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
   Serial.println("[HTTP] begin...");
 
   Serial.printf("Connecting to %s:%d\n", url.host.c_str(), url.port);
-  client.connect(url.host, url.port);
-  if (!client.connected()) {
+  Serial.printf("Free mem: %d\n",  ESP.getFreeHeap());
+  client->connect(url.host, url.port);
+  if (!client->connected()) {
     Serial.println("*** Can't connect. ***\n-------");
+    delete client;
     return -2;
   }
 
@@ -232,13 +251,23 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
 
   Serial.println("Sending request: " + request);
 
-  client.print(request);
+  client->print(request);
+
+  unsigned long timeout = millis();
+  while (client->available() == 0) {
+    if (millis() - timeout > 10000) {
+      Serial.println(">>> Client Timeout !");
+      client->stop();
+      delete client;
+      return -2;
+    }
+  }
 
   long lastUpdate = millis();
 
   int httpCode = 0;
-  while (client.available() || client.connected()) {
-    String line = client.readStringUntil('\n');
+  while (client->available() || client->connected()) {
+    String line = client->readStringUntil('\n');
     Serial.println(line);
 
     if (line.startsWith("HTTP/1.")) {
@@ -256,7 +285,7 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
 
   }
 
-  if (!client.available() == 0) {
+  if (!client->available() == 0) {
     Serial.println("Client disconnected before body parsing");
   }
   Serial.println("Processing body");
@@ -279,13 +308,13 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
       Serial.println("Starting resource download");
       // read all data from server
 
-      while (client.available() || client.connected()) {
+      while (client->available() || client->connected()) {
         // get available data size
-        size_t size = client.available();
+        size_t size = client->available();
 
         if (size > 0) {
           // read up to 1024 byte
-          int c = client.readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+          int c = client->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
           downloadedBytes += c;
 
           file.write(buff, c);
@@ -298,20 +327,24 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
 
       }
       file.close();
-      client.stop();
+      client->stop();
+      delete client;
       Serial.printf("Downloaded file %s with size %d", fileName.c_str(), downloadedBytes);
       Serial.println();
       Serial.print("[HTTP] connection closed or file end.\n");
       return httpCode;
     } else {
-      client.stop();
+      client->stop();
+      delete client;
       return httpCode;
     }
   } else {
-    client.stop();
+    client->stop();
+    delete client;
     return httpCode;
   }
 
-  client.stop();
+  client->stop();
+  delete client;
   return -2;
 }

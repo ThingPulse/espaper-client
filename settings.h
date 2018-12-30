@@ -28,11 +28,11 @@
  * Device Type
  **************************/
 
-#define EPD29
-//#define EPD42
+//#define EPD29
+#define EPD42
 //#define EPD75
 
-
+ 
 /***************************
  * User Settings
  **************************/
@@ -54,8 +54,8 @@ uint8_t UPDATE_INTERVAL_MINS = 20;
 
 #define CLIENT_VERSION "V011"
 
-#define DEV_ENV
-//#define TEST_ENV
+//#define DEV_ENV
+#define TEST_ENV
 
 const String CONFIG_SSID = "ESPaperConfig";
 const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & release RIGHT button to enter configuration mode.";

@@ -34,11 +34,11 @@ class EspaperParser {
   private:
     MiniGrafx *gfx;
     uint8_t screenWidth;
-    const char *rootCert;
     String baseUrl;
     String requestPath;
     String deviceSecret;
     String clientVersion;
+    BearSSLX509List *cert;
 
     typedef struct Url {
       String protocol;
@@ -49,7 +49,7 @@ class EspaperParser {
 
     int downloadResource(Url url, String fileName, long expires);
     Url dissectUrl(String url);
-    WiFiClient createWifiClient(String protocol);
+    WiFiClient* createWifiClient(String protocol);  
 
   public:
     typedef std::function<void(void)> HandlerFunction;

@@ -131,7 +131,16 @@ int EspaperParser::getAndDrawScreen(String requestPath, EspaperParser::HandlerFu
   String url = this->baseUrl + requestPath;
   int httpCode = downloadResource(this->dissectUrl(url), "/screen", 0);
   downloadCompletedFunction();
-  if (httpCode < 0 || httpCode != 200) {
+  if (httpCode == 410) {
+    gfx->init();
+    gfx->fillBuffer(1);
+    gfx->setColor(0);
+    gfx->setTextAlignment(TEXT_ALIGN_CENTER);
+    gfx->setFont(ArialMT_Plain_16);
+    gfx->drawString(gfx->getWidth() / 2, 20, "The device seems to have been deleted on the server.\nStarting device claim.");
+    gfx->commit();
+    gfx->freeBuffer();
+  } else if (httpCode < 0 || httpCode != 200) {
     gfx->init();
     gfx->fillBuffer(1);
     gfx->setColor(0);
@@ -148,6 +157,7 @@ int EspaperParser::getAndDrawScreen(String requestPath, EspaperParser::HandlerFu
     gfx->commit();
     gfx->freeBuffer();
   }
+  return httpCode;
 }
 
 EspaperParser::Url EspaperParser::dissectUrl(String url) {

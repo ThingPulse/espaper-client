@@ -169,7 +169,13 @@ void sleepWifi() {
 }
 
 void fetchAndDrawScreen(EspaperParser *parser) {
-  parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", sleepWifi);
+  int httpCode = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", sleepWifi);
+  if (httpCode == 410) {
+    DEVICE_ID = "";
+    DEVICE_SECRET = "";
+    saveConfig();
+    ESP.restart(); 
+  }
 }
 
 void setup() {

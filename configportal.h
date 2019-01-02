@@ -416,3 +416,9 @@ String getNtpServer(int index) {
 
   return found > index ? NTP_SERVERS.substring(strIndex[0], strIndex[1]) : "";
 }
+
+void saveDeviceRegistration(String deviceId, String deviceSecret) {
+  DEVICE_ID = deviceId;
+  DEVICE_SECRET = deviceSecret;
+  saveConfig();
+}

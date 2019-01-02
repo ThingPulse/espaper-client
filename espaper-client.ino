@@ -171,9 +171,7 @@ void sleepWifi() {
 void fetchAndDrawScreen(EspaperParser *parser) {
   int httpCode = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", sleepWifi);
   if (httpCode == 410) {
-    DEVICE_ID = "";
-    DEVICE_SECRET = "";
-    saveConfig();
+    saveDeviceRegistration("", "");
     ESP.restart(); 
   }
 }
@@ -221,9 +219,7 @@ void setup() {
             showMessage("Sorry, device registration failed. Please ensure the device has access to " +  SERVER_URL + " and try again. Else contact ThingPulse Support and provide the device MAC address: " + WiFi.macAddress());
           } else {
             Serial.println("Device registration successful, now fetching OTP screen");
-            DEVICE_ID = d.deviceId;
-            DEVICE_SECRET = d.deviceSecret;
-            saveConfig();
+            saveDeviceRegistration(d.deviceId, d.deviceSecret);
             fetchAndDrawScreen(&parser);
           }
         }

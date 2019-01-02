@@ -247,16 +247,18 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
 
   String EOL = "\r\n";
 
+  // keep the X-ESPAPER headers alphabetically sorted
   String request = "GET " + url.path + " HTTP/1.1\r\n" +
                    "Host: " + url.host + "\r\n" +
                    "User-Agent: ESPaperClient/1.0\r\n" +
-                   "X-ESPAPER-SECRET: " + this->deviceSecret + EOL +
-                   "X-ESPAPER-CLIENT-VERSION: " + this->clientVersion + EOL +
                    "X-ESPAPER-BATTERY: " + String(analogRead(A0)) + EOL +
+                   "X-ESPAPER-CLIENT-VERSION: " + this->clientVersion + EOL +
+                   "X-ESPAPER-FREE-HEAP: " + String(ESP.getFreeHeap()) + EOL +
+                   "X-ESPAPER-MILLIS: " + String(millis()) + "\r\n" +
+                   "X-ESPAPER-RESET-REASON: " + ESP.getResetReason() + EOL +
+                   "X-ESPAPER-SECRET: " + this->deviceSecret + EOL +
                    "X-ESPAPER-SPIFFS-FREE: " + (fs_info.totalBytes - fs_info.usedBytes) + EOL +
                    "X-ESPAPER-SPIFFS-TOTAL: " + String(fs_info.totalBytes) + EOL +
-                   "X-ESPAPER-MILLIS: " + String(millis()) + "\r\n" +
-                   "X-ESPAPER-FREE-HEAP: " + String(ESP.getFreeHeap()) + EOL +
                    "X-ESPAPER-WIFI-RSSI: " + String(WiFi.RSSI()) + EOL +
                    "Connection: close\r\n\r\n";
 

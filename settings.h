@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <FS.h>
 
 /***************************
  * Device Type
@@ -52,7 +53,7 @@ uint8_t UPDATE_INTERVAL_MINS = 20;
  * Internal Settings
  **************************/
 
-#define CLIENT_VERSION "V011"
+#define CLIENT_VERSION "V012"
 
 //#define DEV_ENV
 //#define TEST_ENV
@@ -90,7 +91,7 @@ const String SERVER_API_DEVICES_PATH = "/public/devices";
   // use empty array as a placeholder, as the scheme is HTTP rather 
   // than HTTPS it won't actually be used, see EspaperParser::createWifiClient
   static const char rootCaCert[] PROGMEM = {};
-  const String SERVER_URL = "http://192.168.0.37:8080";
+  const String SERVER_URL = "http://192.168.0.143:8080";
 #else
   // exported from Firefox as x509.pem format
   static const char rootCaCert[] PROGMEM = R"EOF(
@@ -180,4 +181,6 @@ void resetUserSettings() {
   DEVICE_ID = "";
   DEVICE_SECRET = "";
 }
+
+
   

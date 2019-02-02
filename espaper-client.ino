@@ -63,6 +63,7 @@ void showMessage(String message) {
   gfx.setColor(MINI_BLACK);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setFont(ArialMT_Plain_16);
+  gfx.drawPalettedBitmapFromFile(0, 0, "/screen");
   gfx.drawStringMaxWidth(gfx.getWidth() / 2, STD_MESSAGE_Y_POSITION, gfx.getWidth() * MAX_TEXT_WIDTH_FACTOR, message);
   gfx.commit();
   gfx.freeBuffer();
@@ -101,7 +102,7 @@ boolean connectWifi() {
   uint32_t startTime = millis();
   Serial.print("WiFi connect");
   while (WiFi.status() != WL_CONNECTED) {
-    delay(300);
+    delay(100);
     i++;
     if (millis() - startTime > 20000) {
       Serial.println("\nFailed to connect to WiFi");
@@ -126,6 +127,7 @@ bool initTime() {
   time_t now;
   uint32_t startTime = millis();
   uint16_t ntpTimeoutMillis = NTP_SYNC_TIMEOUT_SECONDS * 1000;
+  
   while((now = time(nullptr)) < NTP_MIN_VALID_EPOCH) {
     uint32_t runtimeMillis = millis() - startTime;
     if (runtimeMillis > ntpTimeoutMillis) {
@@ -146,6 +148,15 @@ String buildRegistrationRequestBody() {
   return "{\"macAddress\": \"" + WiFi.macAddress() + "\", \"deviceType\": \"" + SERVER_API_DEVICE_TYPE + "\", \"timeZone\": \"" + getTimeZoneName() + "\"}";  
 }
 
+String buildOptionalHeaderFields(DeviceData *deviceData) {
+    String EOL = "\r\n";
+    return  "X-ESPAPER-TOTAL-DEVICE-STARTS: " + String(deviceData->totalDeviceStarts) + EOL +
+            "X-ESPAPER-SUCCESSFUL-DEVICE-STARTS: " + String(deviceData->successfulDeviceStarts) + EOL +
+            "X-ESPAPER-LAST-NTP-SYNC-TIME: " + String(deviceData->lastNtpSyncTime) + EOL + 
+            "X-ESPAPER-STARTS-WITHOUT-NTP-SYNC: " + String(deviceData->startsWithoutNtpSync) + EOL +
+            "X-ESPAPER-LAST-CYCLE-DURATION: " + String(deviceData->lastCycleDuration) + EOL;
+}
+
 void formatFileSystem() {
   showMessage("File System error.\nFormatting File System\nPlease wait...");
   Serial.println("Formating FS..");
@@ -155,21 +166,27 @@ void formatFileSystem() {
   showMessage("Done formatting...");
 }
 
+
 void sleep() {
+  Serial.printf("Free mem: %d\n",  ESP.getFreeHeap());
   epd.Sleep();
   Serial.printf("\n\n***Time before going to sleep %d\n", millis());
-  ESP.deepSleep(UPDATE_INTERVAL_MINS * 60 * 1000000, WAKE_RF_DEFAULT );
+  ESP.deepSleep(UPDATE_INTERVAL_MINS * 60 * 1000000, WAKE_RF_DISABLED );
 }
 
 void sleepWifi() {
   Serial.println("Putting WiFi to sleep");
+  WiFi.disconnect(); 
+  // Add delay as workaround for WDT reset described in unresolved issue
+  // https://github.com/esp8266/Arduino/issues/4082
+  delay(200);
   WiFi.mode(WIFI_OFF);
   WiFi.forceSleepBegin();
-  delay(1);
+  delay(100);
 }
 
-void fetchAndDrawScreen(EspaperParser *parser) {
-  int httpCode = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", sleepWifi);
+void fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
+  int httpCode = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", buildOptionalHeaderFields(deviceData), sleepWifi);
   if (httpCode == 410) {
     saveDeviceRegistration("", "");
     ESP.restart(); 
@@ -196,7 +213,16 @@ void setup() {
     formatFileSystem();
   }
   boolean isConfigLoaded = loadConfig();
-
+  
+  DeviceData deviceData;
+  loadDeviceData(&deviceData);
+  if (deviceData.successfulDeviceStarts >= 1) {
+    deviceData.totalDeviceStarts = 0;
+    deviceData.successfulDeviceStarts = 0;
+  }
+  deviceData.totalDeviceStarts++;
+  saveDeviceData(&deviceData);
+  
   Serial.println("Button state: " + String(btnState));
   if (btnState == LOW || !isConfigLoaded) {
     startConfigPortal(&gfx);
@@ -204,12 +230,15 @@ void setup() {
     Serial.printf("\n\n***Time before connecting to WiFi %d\n", millis());
     boolean success = connectWifi();
     if (success) {
+      delay(200);
       boolean timeInit = initTime();
       if (timeInit) {
         EspaperParser parser(&gfx, rootCaCert, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
         Serial.printf("\n\n***Time before going to fetching data %d\n", millis());
+        deviceData.successfulDeviceStarts++;
+        deviceData.lastNtpSyncTime = time(nullptr);
         if (isDeviceRegistered()) {
-          fetchAndDrawScreen(&parser);
+          fetchAndDrawScreen(&parser, &deviceData); 
         } else {
           Serial.printf("Free mem: %d\n",  ESP.getFreeHeap());
           Serial.println("Device id and/or secret are not set yet -> registering device with server now");
@@ -220,29 +249,23 @@ void setup() {
           } else {
             Serial.println("Device registration successful, now fetching OTP screen");
             saveDeviceRegistration(d.deviceId, d.deviceSecret);
-            fetchAndDrawScreen(&parser);
-          }
+            fetchAndDrawScreen(&parser, &deviceData);          }
         }
+        deviceData.startsWithoutNtpSync = 0;
       } else {
         showMessage("Failed to update time from internet (NTP). Please retry or verify your settings. " + CONFIG_MODE_INSTRUCTION);
+        deviceData.startsWithoutNtpSync++;
       }
     } else {
       showMessage("Failed to connect to WiFi '" + WIFI_SSID + "'. Please retry or verify your settings. " + CONFIG_MODE_INSTRUCTION);
     }
 
-    #ifndef DEV_ENV
+    deviceData.lastCycleDuration = millis();
+    saveDeviceData(&deviceData);
     sleep();
-    #endif
   }
 }
 
 void loop() {
-#ifdef DEV_ENV
-  boolean isPressed = !digitalRead(0);
-  if (isPressed) {
-    EspaperParser parser(&gfx, rootCaCert, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
-    fetchAndDrawScreen(&parser);
-  }
-  delay(100);
-#endif
+
 }

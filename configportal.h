@@ -30,6 +30,7 @@
 #include "settings.h"
 
 const String CONFIG_FILE = "/espaper.txt";
+const String DATA_FILE = "/device-data.txt";
 
 const char HTTP_HEAD[] PROGMEM            = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/><title>{v}</title>"; // <link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/favicon.png\">
 const char HTTP_STYLE[] PROGMEM           = "<style>div,input, select{padding:5px;font-size:1em;} input, select{width:95%;} body{text-align: center;font-family:verdana;} button{border:0;border-radius:0.3rem;background-color:#1fa3ec;color:#fff;line-height:2.4rem;font-size:1.2rem;width:100%;}</style>";
@@ -80,6 +81,14 @@ const char HTTP_SAVED[] PROGMEM           = "<div>Credentials Saved<br />Trying 
 const char HTTP_END[] PROGMEM             = "</div></body></html>";
 const char HTTP_OPTION_ITEM[] PROGMEM     = "<option value=\"{v}\" {s}>{n}</option>";
 const char HTTP_LOGO[] PROGMEM            = "<img src=\"/logo.svg\" width=\"400px\" />";
+
+typedef struct DeviceData {
+  uint16_t totalDeviceStarts;
+  uint16_t successfulDeviceStarts;
+  time_t lastNtpSyncTime;
+  uint8_t startsWithoutNtpSync;
+  uint32_t lastCycleDuration;
+} DeviceData;
 
 ESP8266WebServer server (80);
 
@@ -161,6 +170,67 @@ boolean loadConfig() {
   f.close();
   Serial.println("Loaded config");
   return true;
+}
+
+
+
+void loadDeviceData(DeviceData *deviceData) {
+  File f = SPIFFS.open(DATA_FILE, "r");
+  if (!f) {
+    Serial.println("Failed to open data file. Initializing struct.");
+    
+    deviceData->totalDeviceStarts = 0;
+    deviceData->successfulDeviceStarts = 0;
+    deviceData->lastNtpSyncTime = 0;
+    deviceData->startsWithoutNtpSync = 0;
+    deviceData->lastCycleDuration = 0;
+    return;
+  }
+  while (f.available()) {
+    String key = f.readStringUntil('=');
+    String value = f.readStringUntil('\r');
+    f.read();
+    Serial.println(key + " = [" + value + "]");
+    if (key == "TOTAL_DEVICE_STARTS") {
+      deviceData->totalDeviceStarts = value.toInt();
+    }
+    if (key == "SUCCESSFUL_DEVICE_STARTS") {
+      deviceData->successfulDeviceStarts = value.toInt();
+    }
+    if (key == "LAST_NTP_SYNC_TIME") {
+      deviceData->lastNtpSyncTime = value.toInt();
+    }
+    if (key == "STARTS_WITHOUT_NTP_SYNC") {
+      deviceData->startsWithoutNtpSync = value.toInt();
+    }
+    if (key == "LAST_CYCLE_DURATION") {
+      deviceData->lastCycleDuration = value.toInt();
+    }
+  }
+
+  f.close();
+  Serial.println("Loaded data file");
+
+}
+void saveDeviceData(DeviceData* deviceData) {
+  File f = SPIFFS.open(DATA_FILE, "w+");
+  if (!f) {
+    Serial.println("Failed to open da file");
+    return;
+  }
+  f.print("TOTAL_DEVICE_STARTS=");
+  f.println(deviceData->totalDeviceStarts);
+  f.print("SUCCESSFUL_DEVICE_STARTS=");
+  f.println(deviceData->successfulDeviceStarts);
+  f.print("LAST_NTP_SYNC_TIME=");
+  f.println(deviceData->lastNtpSyncTime);
+  f.print("STARTS_WITHOUT_NTP_SYNC=");
+  f.println(deviceData->startsWithoutNtpSync);
+  f.print("LAST_CYCLE_DURATION=");
+  f.println(deviceData->lastCycleDuration);
+  f.close();
+  Serial.println("Saved values in data file.");
+  return;
 }
 
 void handleRoot() {

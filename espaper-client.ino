@@ -63,7 +63,6 @@ void showMessage(String message) {
   gfx.setColor(MINI_BLACK);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setFont(ArialMT_Plain_16);
-  gfx.drawPalettedBitmapFromFile(0, 0, "/screen");
   gfx.drawStringMaxWidth(gfx.getWidth() / 2, STD_MESSAGE_Y_POSITION, gfx.getWidth() * MAX_TEXT_WIDTH_FACTOR, message);
   gfx.commit();
   gfx.freeBuffer();

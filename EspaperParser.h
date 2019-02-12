@@ -47,7 +47,7 @@ class EspaperParser {
       String path;
     } Url;
 
-    int downloadResource(Url url, String fileName, long expires);
+    int downloadResource(Url url, String fileName, String optionalHeaderFields);
     Url dissectUrl(String url);
     WiFiClient* createWifiClient(String protocol);  
 
@@ -63,5 +63,5 @@ class EspaperParser {
     
     DeviceIdAndSecret registerDevice(String requestPath, String jsonData);
   
-    int getAndDrawScreen(String requestPath, HandlerFunction downloadCompletedFunction);
+    int getAndDrawScreen(String requestPath, String optionalHeaderFields, HandlerFunction downloadCompletedFunction);
 };

@@ -122,15 +122,16 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
   return result;
 }
 
-int EspaperParser::getAndDrawScreen(String requestPath, EspaperParser::HandlerFunction downloadCompletedFunction) {
+int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFields, EspaperParser::HandlerFunction downloadCompletedFunction) {
 
   String url = this->baseUrl + requestPath;
-  int httpCode = downloadResource(this->dissectUrl(url), "/screen", 0);
+  int httpCode = downloadResource(this->dissectUrl(url), "/screen", optionalHeaderFields);
   downloadCompletedFunction();
 
   gfx->init();
   gfx->fillBuffer(1);
-  
+
+
   if (httpCode == 200) {
     gfx->drawPalettedBitmapFromFile(0, 0, "/screen");
   } else {
@@ -226,8 +227,8 @@ WiFiClient* EspaperParser::createWifiClient(String protocol) {
 
 }
 
-int EspaperParser::downloadResource(Url url, String fileName, long expires) {
-  Serial.printf("Protocol: %s\n Host: %s\n Port: %d\n URL: %s\n FileName: %s\n Expires: %d\n", url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str(), fileName.c_str(), expires);
+int EspaperParser::downloadResource(Url url, String fileName, String optionalHeaderFields) {
+  Serial.printf("Protocol: %s\n Host: %s\n Port: %d\n URL: %s\n FileName: %s\n", url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str(), fileName.c_str());
 
   WiFiClient *client = this->createWifiClient(url.protocol);
 
@@ -260,6 +261,7 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
                    "X-ESPAPER-SPIFFS-FREE: " + (fs_info.totalBytes - fs_info.usedBytes) + EOL +
                    "X-ESPAPER-SPIFFS-TOTAL: " + String(fs_info.totalBytes) + EOL +
                    "X-ESPAPER-WIFI-RSSI: " + String(WiFi.RSSI()) + EOL +
+                   optionalHeaderFields +
                    "Connection: close\r\n\r\n";
 
   Serial.println("Sending request: " + request);
@@ -331,11 +333,11 @@ int EspaperParser::downloadResource(Url url, String fileName, long expires) {
           downloadedBytes += c;
 
           file.write(buff, c);
-          Serial.printf("%d\n", (int)downloadedBytes);
+          Serial.print("#");
         }
         if (millis() - lastUpdate > 500) {
           lastUpdate = millis();
-          Serial.printf("Bytes downloaded: %d\n", downloadedBytes);
+          Serial.println();
         }
 
       }

@@ -38,7 +38,7 @@ class EspaperParser {
     String requestPath;
     String deviceSecret;
     String clientVersion;
-    BearSSLX509List *certList;
+    X509List *certList;
 
     typedef struct Url {
       String protocol;

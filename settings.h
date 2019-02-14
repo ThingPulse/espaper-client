@@ -29,8 +29,8 @@
  * Device Type
  **************************/
 
-//#define EPD29
-#define EPD42
+#define EPD29
+//#define EPD42
 //#define EPD75
 
  

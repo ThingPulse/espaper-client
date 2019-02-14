@@ -25,7 +25,7 @@
 
 EspaperParser::EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion) {
   this->gfx = gfx;
-  this->certList = new BearSSLX509List(rootCertificate);
+  this->certList = new X509List(rootCertificate);
   this->baseUrl = baseUrl;
   this->deviceSecret = deviceSecret;
   this->clientVersion = clientVersion;

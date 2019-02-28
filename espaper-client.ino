@@ -57,6 +57,20 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
 
 MiniGrafx gfx = MiniGrafx(&epd, BITS_PER_PIXEL, palette);
 
+void showMessageOverScreen(String message) {
+  gfx.init();
+  gfx.fillBuffer(1);
+  gfx.drawPalettedBitmapFromFile(0, 0, "/screen");
+  gfx.setColor(MINI_BLACK);
+  gfx.fillRect(0, 0, gfx.getWidth(), 15);
+  gfx.setColor(MINI_WHITE);
+  gfx.setTextAlignment(TEXT_ALIGN_LEFT);
+  gfx.setFont(ArialMT_Plain_10);
+  gfx.drawString(2, 1, message);
+  gfx.commit();
+  gfx.freeBuffer();
+}
+
 void showMessage(String message) {
   gfx.init();
   gfx.fillBuffer(1);
@@ -126,7 +140,6 @@ bool initTime() {
   time_t now;
   uint32_t startTime = millis();
   uint16_t ntpTimeoutMillis = NTP_SYNC_TIMEOUT_SECONDS * 1000;
-  
   while((now = time(nullptr)) < NTP_MIN_VALID_EPOCH) {
     uint32_t runtimeMillis = millis() - startTime;
     if (runtimeMillis > ntpTimeoutMillis) {
@@ -134,6 +147,12 @@ bool initTime() {
       return false;
     }
     Serial.print(".");
+    if (retryCounter > 3) {
+      Serial.println("Re-initializing NTP");
+      configTime(0, 0, getNtpServer(0).c_str(), getNtpServer(1).c_str(), getNtpServer(2).c_str());
+      retryCounter = 0;
+    }
+    retryCounter++;
     delay(300);
   }
   Serial.println();
@@ -252,11 +271,11 @@ void setup() {
         }
         deviceData.startsWithoutNtpSync = 0;
       } else {
-        showMessage("Failed to update time from internet (NTP). Please retry or verify your settings. " + CONFIG_MODE_INSTRUCTION);
+        showMessageOverScreen("Failed to update time from internet (NTP)");
         deviceData.startsWithoutNtpSync++;
       }
     } else {
-      showMessage("Failed to connect to WiFi '" + WIFI_SSID + "'. Please retry or verify your settings. " + CONFIG_MODE_INSTRUCTION);
+      showMessageOverScreen("Failed to connect to WiFi '" + WIFI_SSID + "'");
     }
 
     deviceData.lastCycleDuration = millis();

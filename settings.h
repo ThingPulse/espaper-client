@@ -53,7 +53,7 @@ uint8_t UPDATE_INTERVAL_MINS = 20;
  * Internal Settings
  **************************/
 
-#define CLIENT_VERSION "V012"
+#define CLIENT_VERSION "V013"
 
 //#define DEV_ENV
 //#define TEST_ENV

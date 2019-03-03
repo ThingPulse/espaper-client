@@ -24,10 +24,13 @@
 #pragma once
 
 #include <WiFiClientSecure.h>
+#include <ESP8266httpUpdate.h>
 #include <ESP8266WiFi.h>
 #include <MiniGrafx.h>
 #include <Arduino.h>
 #include <MiniGrafxFonts.h>
+
+#define HTTP_INTERNAL_CODE_UPGRADE_CLIENT -5
 
 class EspaperParser {
 
@@ -41,6 +44,7 @@ class EspaperParser {
     X509List *certList;
 
     typedef struct Url {
+      String url;
       String protocol;
       String host;
       uint16_t port; 
@@ -48,8 +52,9 @@ class EspaperParser {
     } Url;
 
     int downloadResource(Url url, String fileName, String optionalHeaderFields);
+    
     Url dissectUrl(String url);
-    WiFiClient* createWifiClient(String protocol);  
+    WiFiClient* createWifiClient(Url url);  
 
   public:
     typedef std::function<void(void)> HandlerFunction;
@@ -60,6 +65,8 @@ class EspaperParser {
     } DeviceIdAndSecret;
   
     EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion);
+
+    int updateFirmware(String url);
     
     DeviceIdAndSecret registerDevice(String requestPath, String jsonData);
   

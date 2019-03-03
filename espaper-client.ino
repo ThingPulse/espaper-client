@@ -163,37 +163,37 @@ bool initTime() {
 }
 
 String buildRegistrationRequestBody() {
-  return "{\"macAddress\": \"" + WiFi.macAddress() + "\", \"deviceType\": \"" + SERVER_API_DEVICE_TYPE + "\", \"timeZone\": \"" + getTimeZoneName() + "\"}";  
+  return String(F("{\"macAddress\": \"")) + WiFi.macAddress() + String(F("\", \"deviceType\": \"")) + SERVER_API_DEVICE_TYPE + String(F("\", \"timeZone\": \"")) + getTimeZoneName() + String(F("\"}"));  
 }
 
 String buildOptionalHeaderFields(DeviceData *deviceData) {
-    String EOL = "\r\n";
-    return  "X-ESPAPER-TOTAL-DEVICE-STARTS: " + String(deviceData->totalDeviceStarts) + EOL +
-            "X-ESPAPER-SUCCESSFUL-DEVICE-STARTS: " + String(deviceData->successfulDeviceStarts) + EOL +
-            "X-ESPAPER-LAST-NTP-SYNC-TIME: " + String(deviceData->lastNtpSyncTime) + EOL + 
-            "X-ESPAPER-STARTS-WITHOUT-NTP-SYNC: " + String(deviceData->startsWithoutNtpSync) + EOL +
-            "X-ESPAPER-LAST-CYCLE-DURATION: " + String(deviceData->lastCycleDuration) + EOL;
+    String EOL = String(F("\r\n"));
+    return  String(F("X-ESPAPER-TOTAL-DEVICE-STARTS: ")) + String(deviceData->totalDeviceStarts) + EOL +
+            String(F("X-ESPAPER-SUCCESSFUL-DEVICE-STARTS: ")) + String(deviceData->successfulDeviceStarts) + EOL +
+            String(F("X-ESPAPER-LAST-NTP-SYNC-TIME: ")) + String(deviceData->lastNtpSyncTime) + EOL + 
+            String(F("X-ESPAPER-STARTS-WITHOUT-NTP-SYNC: ")) + String(deviceData->startsWithoutNtpSync) + EOL +
+            String(F("X-ESPAPER-LAST-CYCLE-DURATION: ")) + String(deviceData->lastCycleDuration) + EOL;
 }
 
 void formatFileSystem() {
-  showMessage("File System error.\nFormatting File System\nPlease wait...");
-  Serial.println("Formating FS..");
+  showMessage(String(F("File System error.\nFormatting File System\nPlease wait...")));
+  Serial.println(F("Formating FS.."));
   SPIFFS.format();
-  Serial.println("Done Formatting");
+  Serial.println(F("Done Formatting"));
   SPIFFS.begin();
-  showMessage("Done formatting...");
+  showMessage(String(F("Done formatting...")));
 }
 
 
 void sleep() {
-  Serial.printf("Free mem: %d\n",  ESP.getFreeHeap());
+  Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
   epd.Sleep();
-  Serial.printf("\n\n***Time before going to sleep %d\n", millis());
+  Serial.printf_P(PSTR("\n\n***Time before going to sleep %d\n"), millis());
   ESP.deepSleep(UPDATE_INTERVAL_MINS * 60 * 1000000, WAKE_RF_DISABLED );
 }
 
 void sleepWifi() {
-  Serial.println("Putting WiFi to sleep");
+  Serial.println(F("Putting WiFi to sleep"));
   WiFi.disconnect(); 
   // Add delay as workaround for WDT reset described in unresolved issue
   // https://github.com/esp8266/Arduino/issues/4082
@@ -209,23 +209,32 @@ void fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
     saveDeviceRegistration("", "");
     ESP.restart(); 
   }
+  if (httpCode == HTTP_INTERNAL_CODE_UPGRADE_CLIENT) {
+    Serial.println(F("Firmware upgrade requested by server"));
+    deviceData->actionAfterReboot = ACTION_AFTER_REBOOT_UPGRADE_FIRMWARE;
+    saveDeviceData(deviceData);
+    ESP.restart(); 
+  } else {
+    deviceData->actionAfterReboot = ACTION_AFTER_REBOOT_UPDATE_SCREEN;
+  }
 }
 
 void setup() {
   Serial.begin(115200);
   Serial.println();
-  Serial.println("Boot sequence arrived in setup()");
+  Serial.println(F("Boot sequence arrived in setup()"));
+  Serial.printf_P(PSTR("******** Client Version: %s ********\n"), CLIENT_VERSION);
   // Turn WiFi off until we really need it
   sleepWifi();
 
-  Serial.println("Current free heap: " + ESP.getFreeHeap());
+  Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
   
   gfx.setRotation(DEVICE_ROTATION);
   gfx.setFastRefresh(false);
   
   pinMode(USR_BTN, INPUT_PULLUP);
   int btnState = digitalRead(USR_BTN);
-  Serial.println("Checking FS");
+  Serial.println(F("Checking FS"));
   boolean isMounted = SPIFFS.begin();
   if (!isMounted) {
     formatFileSystem();
@@ -241,41 +250,49 @@ void setup() {
   deviceData.totalDeviceStarts++;
   saveDeviceData(&deviceData);
   
-  Serial.println("Button state: " + String(btnState));
+  //Serial.printf_P(F("Button state: %s\n"), btnState);
   if (btnState == LOW || !isConfigLoaded) {
     startConfigPortal(&gfx);
   } else {
-    Serial.printf("\n\n***Time before connecting to WiFi %d\n", millis());
+    Serial.printf_P(PSTR("\n\n***Time before connecting to WiFi %d\n"), millis());
     boolean success = connectWifi();
     if (success) {
       delay(200);
       boolean timeInit = initTime();
       if (timeInit) {
         EspaperParser parser(&gfx, rootCaCert, SERVER_URL, DEVICE_SECRET, String(CLIENT_VERSION));
-        Serial.printf("\n\n***Time before going to fetching data %d\n", millis());
+        Serial.printf_P(PSTR("\n\n***Time before going to fetching data %d\n"), millis());
         deviceData.successfulDeviceStarts++;
         deviceData.lastNtpSyncTime = time(nullptr);
-        if (isDeviceRegistered()) {
+        if (deviceData.actionAfterReboot == ACTION_AFTER_REBOOT_UPGRADE_FIRMWARE) {
+          Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
+
+          parser.updateFirmware(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/firmware");
+          deviceData.actionAfterReboot = ACTION_AFTER_REBOOT_UPDATE_SCREEN;
+          saveDeviceData(&deviceData);
+          Serial.println(F("Updated firmware. Restarting."));
+          ESP.restart();
+        } else if (isDeviceRegistered()) {
           fetchAndDrawScreen(&parser, &deviceData); 
         } else {
-          Serial.printf("Free mem: %d\n",  ESP.getFreeHeap());
-          Serial.println("Device id and/or secret are not set yet -> registering device with server now");
+          Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
+          Serial.println(F("Device id and/or secret are not set yet -> registering device with server now"));
           EspaperParser::DeviceIdAndSecret d = parser.registerDevice(SERVER_API_DEVICES_PATH, buildRegistrationRequestBody());
           if (d.deviceId == "-1") {
-            Serial.println("Device registration failed");
-            showMessage("Sorry, device registration failed. Please ensure the device has access to " +  SERVER_URL + " and try again. Else contact ThingPulse Support and provide the device MAC address: " + WiFi.macAddress());
+            Serial.println(F("Device registration failed"));
+            showMessage(String(F("Sorry, device registration failed. Please ensure the device has access to ")) +  SERVER_URL + String(F(" and try again. Else contact ThingPulse Support and provide the device MAC address: ")) + WiFi.macAddress());
           } else {
-            Serial.println("Device registration successful, now fetching OTP screen");
+            Serial.println(F("Device registration successful, now fetching OTP screen"));
             saveDeviceRegistration(d.deviceId, d.deviceSecret);
             fetchAndDrawScreen(&parser, &deviceData);          }
         }
         deviceData.startsWithoutNtpSync = 0;
       } else {
-        showMessageOverScreen("Failed to update time from internet (NTP)");
+        showMessageOverScreen(String(F("Failed to update time from internet (NTP)")));
         deviceData.startsWithoutNtpSync++;
       }
     } else {
-      showMessageOverScreen("Failed to connect to WiFi '" + WIFI_SSID + "'");
+      showMessageOverScreen(String(F("Failed to connect to WiFi '")) + WIFI_SSID + String(F("'")));
     }
 
     deviceData.lastCycleDuration = millis();

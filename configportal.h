@@ -82,12 +82,16 @@ const char HTTP_END[] PROGMEM             = "</div></body></html>";
 const char HTTP_OPTION_ITEM[] PROGMEM     = "<option value=\"{v}\" {s}>{n}</option>";
 const char HTTP_LOGO[] PROGMEM            = "<img src=\"/logo.svg\" width=\"400px\" />";
 
+#define ACTION_AFTER_REBOOT_UPDATE_SCREEN 0
+#define ACTION_AFTER_REBOOT_UPGRADE_FIRMWARE 10
+
 typedef struct DeviceData {
   uint16_t totalDeviceStarts;
   uint16_t successfulDeviceStarts;
   time_t lastNtpSyncTime;
   uint8_t startsWithoutNtpSync;
   uint32_t lastCycleDuration;
+  uint8_t actionAfterReboot;
 } DeviceData;
 
 ESP8266WebServer server (80);
@@ -162,6 +166,9 @@ boolean loadConfig() {
     if (key == "DEVICE_SECRET" || key == "DEVICE_KEY") { // support pre-V011 clients
       DEVICE_SECRET = value;
     }
+    if (key == "" && value == "") {
+      break;
+    }
   }
   if (WIFI_SSID == "" || WIFI_PASS == "" || TIMEZONE == "") {
     Serial.println("At least one configuration property not yet defined");
@@ -177,13 +184,14 @@ boolean loadConfig() {
 void loadDeviceData(DeviceData *deviceData) {
   File f = SPIFFS.open(DATA_FILE, "r");
   if (!f) {
-    Serial.println("Failed to open data file. Initializing struct.");
+    Serial.println(F("Failed to open data file. Initializing struct."));
     
     deviceData->totalDeviceStarts = 0;
     deviceData->successfulDeviceStarts = 0;
     deviceData->lastNtpSyncTime = 0;
     deviceData->startsWithoutNtpSync = 0;
     deviceData->lastCycleDuration = 0;
+    deviceData->actionAfterReboot = ACTION_AFTER_REBOOT_UPDATE_SCREEN;
     return;
   }
   while (f.available()) {
@@ -206,30 +214,35 @@ void loadDeviceData(DeviceData *deviceData) {
     if (key == "LAST_CYCLE_DURATION") {
       deviceData->lastCycleDuration = value.toInt();
     }
+    if (key == "ACTION_AFTER_REBOOT") {
+      deviceData->actionAfterReboot = value.toInt();
+    }
   }
 
   f.close();
-  Serial.println("Loaded data file");
+  Serial.println(F("Loaded data file"));
 
 }
 void saveDeviceData(DeviceData* deviceData) {
   File f = SPIFFS.open(DATA_FILE, "w+");
   if (!f) {
-    Serial.println("Failed to open da file");
+    Serial.println(F("Failed to open da file"));
     return;
   }
-  f.print("TOTAL_DEVICE_STARTS=");
+  f.print(F("TOTAL_DEVICE_STARTS="));
   f.println(deviceData->totalDeviceStarts);
-  f.print("SUCCESSFUL_DEVICE_STARTS=");
+  f.print(F("SUCCESSFUL_DEVICE_STARTS="));
   f.println(deviceData->successfulDeviceStarts);
-  f.print("LAST_NTP_SYNC_TIME=");
+  f.print(F("LAST_NTP_SYNC_TIME="));
   f.println(deviceData->lastNtpSyncTime);
-  f.print("STARTS_WITHOUT_NTP_SYNC=");
+  f.print(F("STARTS_WITHOUT_NTP_SYNC="));
   f.println(deviceData->startsWithoutNtpSync);
-  f.print("LAST_CYCLE_DURATION=");
+  f.print(F("LAST_CYCLE_DURATION="));
   f.println(deviceData->lastCycleDuration);
+  f.print(F("ACTION_AFTER_REBOOT="));
+  f.println(deviceData->actionAfterReboot);
   f.close();
-  Serial.println("Saved values in data file.");
+  Serial.println(F("Saved values in data file."));
   return;
 }
 

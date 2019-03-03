@@ -22,15 +22,17 @@ This client here is responsible for a simple & smooth registration process and f
 
 ## Setup
 
-Skip ahead to step 3 if you have been working with Arduino IDE and ESP8266 devices before.
-
 1. Go to [https://www.espaper.com](https://www.espaper.com) and create an account. You can either use email and password for authentication or use one of the social login options.
 1. [Install drivers for USB-to-Serial](https://docs.thingpulse.com/how-tos/install-drivers/)
 1. [Prepare the Arduino IDE for ESP8266](https://docs.thingpulse.com/how-tos/Arduino-IDE-for-ESP8266/)
+	- You need at least ESP8266 Arduino Core 2.5.0
 1. Download or clone this repository to your computer. Then open it in the Arduino IDE.
 1. Install the [MiniGrafx library](https://github.com/ThingPulse/minigrafx) through the library manager in the Arduino IDE.
 1. Define the device type in [`settings.h:31ff`](https://github.com/ThingPulse/espaper-client/blob/master/settings.h#L31). Hints: 'EDP' = ESPaper Display, '29' = 2.9''
 1. Compile and upload the sketch to your ESPaper module. Then Restart it.
+	- in Tools > Board: * > select "Generic ESP8266 Module"
+	- in Tools > Flash Mode select "QIO"
+	- in Tools > Flash Size select "2M (512K SPIFFS)"
 1. Follow the instructions displayed on screen.
 1. Initiate the registration process by restarting the device.
 1. Now go back to [https://www.espaper.com](https://www.espaper.com) and complete registration process by adding your device.

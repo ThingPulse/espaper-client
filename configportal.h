@@ -166,7 +166,9 @@ boolean loadConfig() {
     if (key == "DEVICE_SECRET" || key == "DEVICE_KEY") { // support pre-V011 clients
       DEVICE_SECRET = value;
     }
+    // break infinite loop if file is present but somehow empty or corrupt
     if (key == "" && value == "") {
+      Serial.println(F("Config file available on SPIFFS but at least one line with empty key and value found. Exiting read loop."));
       break;
     }
   }
@@ -217,16 +219,21 @@ void loadDeviceData(DeviceData *deviceData) {
     if (key == "ACTION_AFTER_REBOOT") {
       deviceData->actionAfterReboot = value.toInt();
     }
+    // break infinite loop if file is present but somehow empty or corrupt
+    if (key == "" && value == "") {
+      Serial.println(F("Device data file available on SPIFFS but at least one line with empty key and value found. Exiting read loop."));
+      break;
+    }
   }
 
   f.close();
   Serial.println(F("Loaded data file"));
-
 }
+
 void saveDeviceData(DeviceData* deviceData) {
   File f = SPIFFS.open(DATA_FILE, "w+");
   if (!f) {
-    Serial.println(F("Failed to open da file"));
+    Serial.println(F("Failed to open data file"));
     return;
   }
   f.print(F("TOTAL_DEVICE_STARTS="));
@@ -243,7 +250,6 @@ void saveDeviceData(DeviceData* deviceData) {
   f.println(deviceData->actionAfterReboot);
   f.close();
   Serial.println(F("Saved values in data file."));
-  return;
 }
 
 void handleRoot() {

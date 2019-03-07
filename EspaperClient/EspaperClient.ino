@@ -293,6 +293,7 @@ void setup() {
         deviceData.successfulDeviceStarts++;
         deviceData.lastNtpSyncTime = time(nullptr);
         if (deviceData.actionAfterReboot == ACTION_AFTER_REBOOT_UPGRADE_FIRMWARE) {
+          showMessageOverScreen(String(F("Firmware upgrade in progress...")));
           updateFirmware(&parser, &deviceData);
         } else if (isDeviceRegistered()) {
           fetchAndDrawScreen(&parser, &deviceData);

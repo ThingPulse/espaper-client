@@ -44,7 +44,6 @@ class EspaperParser {
     X509List *certList;
 
     typedef struct Url {
-      String url;
       String protocol;
       String host;
       uint16_t port; 
@@ -66,7 +65,7 @@ class EspaperParser {
   
     EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion);
 
-    int updateFirmware(String url);
+    void updateFirmware(String url);
     
     DeviceIdAndSecret registerDevice(String requestPath, String jsonData);
   

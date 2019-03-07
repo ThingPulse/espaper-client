@@ -171,11 +171,10 @@ int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFie
 }
 
 EspaperParser::Url EspaperParser::dissectUrl(String url) {
+  Url result;
+  
   // Code from https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp
   // check for : (http: or https:
-  Url result;
-  result.url = url;
-  
   int index = url.indexOf(':');
   if (index < 0) {
     Serial.print("[HTTP-Client][begin] failed to parse protocol\n");
@@ -243,7 +242,7 @@ WiFiClient* EspaperParser::createWifiClient(Url url) {
 }
 
 int EspaperParser::downloadResource(Url url, String fileName, String optionalHeaderFields) {
-  Serial.printf("Protocol: %s\n Host: %s\n Port: %d\n URL: %s\n FileName: %s\n", url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str(), fileName.c_str());
+  Serial.printf(PSTR("Downloading resource from:\n\tScheme: %s\n\tHost: %s\n\tPort: %d\n\tPath: %s\n"), url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str());
 
   WiFiClient *client = this->createWifiClient(url);
 
@@ -383,36 +382,38 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
   return -2;
 }
 
-int EspaperParser::updateFirmware(String requestPath) {
+// As per https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#advanced-updater
+void EspaperParser::updateFirmware(String requestPath) {
   String urlPath = this->baseUrl + requestPath;
   Url url = this->dissectUrl(urlPath);
-  Serial.printf("Update firmware: Orig. url: %s\n %s\n Host: %s\n Port: %d\n URL: %s\n", url.url.c_str(), url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str());
+  Serial.printf(PSTR("Updating firmware from:\n\tScheme: %s\n\tHost: %s\n\tPort: %d\n\tPath: %s\n"), url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str());
   WiFiClient *client = this->createWifiClient(url);
 
-  Serial.println(url.url);
-  Serial.printf("Free sketch space: %d\n", ESP.getFreeSketchSpace());
+  Serial.printf(PSTR("Free sketch space: %d\n"), ESP.getFreeSketchSpace());
   ESPhttpUpdate.rebootOnUpdate(false);
-  t_httpUpdate_return ret = ESPhttpUpdate.update(*client, url.url);
+  t_httpUpdate_return ret = ESPhttpUpdate.update(*client, urlPath);
   
+  Serial.print("Status code after firmware update: ");
   Serial.println(ret);
-  Serial.println("Status code after firmware update: ");
-  Serial.println(ret);
+  // As per https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266httpUpdate/src/ESP8266httpUpdate.h#L57 there are currently 3 values supported
+  switch (ret) {
+    case HTTP_UPDATE_FAILED:
+      Serial.printf(PSTR("HTTP_UPDATE_FAILED Error (%d): %s\n"), ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+      break;
 
-      switch (ret) {
-      case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-        break;
+    case HTTP_UPDATE_NO_UPDATES:
+      // no further info to print
+      break;
 
-      case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
-        break;
+    case HTTP_UPDATE_OK:
+      // no further info to print
+      break;
 
-      case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
-        break;
+    default:
+      Serial.printf_P(PSTR("%s is an unexpected return value. Did the library change?\n"), ret);
+      break;  
   }
  
   client->stop();
   delete client;
-  return -2;
 }

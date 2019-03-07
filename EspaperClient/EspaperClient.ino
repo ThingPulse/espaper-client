@@ -224,6 +224,29 @@ void fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
   }
 }
 
+void updateFirmware(EspaperParser *parser, DeviceData *deviceData) {
+  Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
+  parser->updateFirmware(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/firmware");
+  deviceData->actionAfterReboot = ACTION_AFTER_REBOOT_UPDATE_SCREEN;
+  saveDeviceData(deviceData);
+  Serial.println(F("Updated firmware. Restarting."));
+  ESP.restart();
+}
+
+void registerDevice(EspaperParser *parser, DeviceData *deviceData) {
+  Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
+  Serial.println(F("Device id and/or secret are not set yet -> registering device with server now"));
+  EspaperParser::DeviceIdAndSecret d = parser->registerDevice(SERVER_API_DEVICES_PATH, buildRegistrationRequestBody());
+  if (d.deviceId == "-1") {
+    Serial.println(F("Device registration failed"));
+    showMessage(String(F("Sorry, device registration failed. Please ensure the device has access to ")) +  SERVER_URL + String(F(" and try again. Else contact ThingPulse Support and provide the device MAC address: ")) + WiFi.macAddress());
+  } else {
+    Serial.println(F("Device registration successful, now fetching OTP screen"));
+    saveDeviceRegistration(d.deviceId, d.deviceSecret);
+    fetchAndDrawScreen(parser, deviceData);
+  }  
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println();
@@ -255,7 +278,7 @@ void setup() {
   deviceData.totalDeviceStarts++;
   saveDeviceData(&deviceData);
 
-  //Serial.printf_P(F("Button state: %s\n"), btnState);
+  Serial.printf(PSTR("Button state: %d\n"), btnState);
   if (btnState == LOW || !isConfigLoaded) {
     startConfigPortal(&gfx);
   } else {
@@ -270,26 +293,11 @@ void setup() {
         deviceData.successfulDeviceStarts++;
         deviceData.lastNtpSyncTime = time(nullptr);
         if (deviceData.actionAfterReboot == ACTION_AFTER_REBOOT_UPGRADE_FIRMWARE) {
-          Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
-
-          parser.updateFirmware(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/firmware");
-          deviceData.actionAfterReboot = ACTION_AFTER_REBOOT_UPDATE_SCREEN;
-          saveDeviceData(&deviceData);
-          Serial.println(F("Updated firmware. Restarting."));
-          ESP.restart();
+          updateFirmware(&parser, &deviceData);
         } else if (isDeviceRegistered()) {
           fetchAndDrawScreen(&parser, &deviceData);
         } else {
-          Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
-          Serial.println(F("Device id and/or secret are not set yet -> registering device with server now"));
-          EspaperParser::DeviceIdAndSecret d = parser.registerDevice(SERVER_API_DEVICES_PATH, buildRegistrationRequestBody());
-          if (d.deviceId == "-1") {
-            Serial.println(F("Device registration failed"));
-            showMessage(String(F("Sorry, device registration failed. Please ensure the device has access to ")) +  SERVER_URL + String(F(" and try again. Else contact ThingPulse Support and provide the device MAC address: ")) + WiFi.macAddress());
-          } else {
-            Serial.println(F("Device registration successful, now fetching OTP screen"));
-            saveDeviceRegistration(d.deviceId, d.deviceSecret);
-            fetchAndDrawScreen(&parser, &deviceData);          }
+          registerDevice(&parser, &deviceData);
         }
         deviceData.startsWithoutNtpSync = 0;
       } else {

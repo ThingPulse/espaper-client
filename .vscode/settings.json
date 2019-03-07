@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/deichhor/.platformio/penv/bin:/Users/deichhor/.platformio/penv:/Library/Frameworks/Python.framework/Versions/3.7/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/TeX/texbin:/opt/X11/bin:/Users/deichhor/.mos/bin",
+        "PLATFORMIO_CALLER": "vscode"
+    }
+}

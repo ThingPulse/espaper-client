@@ -39,7 +39,7 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
   
   Url url = this->dissectUrl(this->baseUrl + requestPath);
   Serial.printf("Free mem: %d",  ESP.getFreeHeap());
-  WiFiClient *client = this->createWifiClient(url.protocol);
+  WiFiClient *client = this->createWifiClient(url);
 
   Serial.println("[HTTP] begin...");
 
@@ -128,6 +128,13 @@ int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFie
   int httpCode = downloadResource(this->dissectUrl(url), "/screen", optionalHeaderFields);
   downloadCompletedFunction();
 
+  if (httpCode == HTTP_INTERNAL_CODE_UPGRADE_CLIENT) {
+    // In case of update return before the framebuffer is allocated, since it fragments the 
+    // memory too much
+    Serial.println(F("Update requested"));
+    return httpCode;
+  }
+
   gfx->init();
   gfx->fillBuffer(1);
 
@@ -144,19 +151,20 @@ int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFie
     
     String message = "";
     switch(httpCode) {
-      case -2:  message = "Connection to the server could not be established. Verify this device has access to the internet.";
+      case -2:  message = String(F("Connection to the server could not be established. Verify this device has access to the internet."));
                 break;
                 // TODO: "Starting registration process." is not correct, this parser can't possibly know that...
-      case 410: message = "This device is unknown to the server. It might have been deleted. Starting registration process.";
+      case 410: message = String(F("This device is unknown to the server. It might have been deleted. Starting registration process."));
                 break;
-      default:  message = "Error communicating with the server. HTTP status: " + String(httpCode);
+      default:  message = String(F("Error communicating with the server. HTTP status: ")) + String(httpCode);
                 break;
     }
     
     gfx->drawStringMaxWidth(halfWidth, 20, maxTextWidth, message);
   }
-  
+  Serial.println(F("Writting image to screen"));
   gfx->commit();
+  Serial.println(F("De-allocating frame buffer"));
   gfx->freeBuffer();
     
   return httpCode;
@@ -165,6 +173,9 @@ int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFie
 EspaperParser::Url EspaperParser::dissectUrl(String url) {
   // Code from https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp
   // check for : (http: or https:
+  Url result;
+  result.url = url;
+  
   int index = url.indexOf(':');
   if (index < 0) {
     Serial.print("[HTTP-Client][begin] failed to parse protocol\n");
@@ -199,7 +210,6 @@ EspaperParser::Url EspaperParser::dissectUrl(String url) {
   }
   String _path = url;
 
-  Url result;
 
   result.protocol = _protocol;
   result.host = _host;
@@ -209,12 +219,12 @@ EspaperParser::Url EspaperParser::dissectUrl(String url) {
   return result;
 }
 
-WiFiClient* EspaperParser::createWifiClient(String protocol) {
+WiFiClient* EspaperParser::createWifiClient(Url url) {
   // it would be correct to do this via
   // #ifdef DEV_ENV
   // as it's a compile-time configuration rather than a runtime configuration but including 
   // #include "settings.h" leads to odd compile errors
-  if (String("http").equals(protocol)) {
+  if (String("http").equals(url.protocol)) {
     Serial.println("Using non-secure WiFi client");
     return new WiFiClient();
   } else {
@@ -222,6 +232,11 @@ WiFiClient* EspaperParser::createWifiClient(String protocol) {
     BearSSL::WiFiClientSecure *client = new BearSSL::WiFiClientSecure();
     Serial.println("[HTTP] configuring server root cert in client");
     client->setTrustAnchors(this->certList);
+    bool mfln = client->probeMaxFragmentLength(url.host, url.port, 1024); 
+    Serial.printf("MFLN supported: %s\n", mfln ? "yes" : "no");
+    if (mfln) {
+      client->setBufferSizes(1024, 1024);
+    }
     return client;
   }
 
@@ -230,7 +245,7 @@ WiFiClient* EspaperParser::createWifiClient(String protocol) {
 int EspaperParser::downloadResource(Url url, String fileName, String optionalHeaderFields) {
   Serial.printf("Protocol: %s\n Host: %s\n Port: %d\n URL: %s\n FileName: %s\n", url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str(), fileName.c_str());
 
-  WiFiClient *client = this->createWifiClient(url.protocol);
+  WiFiClient *client = this->createWifiClient(url);
 
   FSInfo fs_info;
   SPIFFS.info(fs_info);
@@ -284,9 +299,13 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
   while (client->available() || client->connected()) {
     String line = client->readStringUntil('\n');
     Serial.println(line);
-
+    line.toUpperCase();
     if (line.startsWith("HTTP/1.")) {
       httpCode = line.substring(9, line.indexOf(' ', 9)).toInt();
+    }
+    if (line.startsWith("X-ESPAPER-COMMAND: UPDATE")) {
+      Serial.println("Server requests firmware update");
+      return HTTP_INTERNAL_CODE_UPGRADE_CLIENT;
     }
     if (line == "\r" || line == "\r\n") {
       Serial.println("headers received");
@@ -359,6 +378,40 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
     return httpCode;
   }
 
+  client->stop();
+  delete client;
+  return -2;
+}
+
+int EspaperParser::updateFirmware(String requestPath) {
+  String urlPath = this->baseUrl + requestPath;
+  Url url = this->dissectUrl(urlPath);
+  Serial.printf("Update firmware: Orig. url: %s\n %s\n Host: %s\n Port: %d\n URL: %s\n", url.url.c_str(), url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str());
+  WiFiClient *client = this->createWifiClient(url);
+
+  Serial.println(url.url);
+  Serial.printf("Free sketch space: %d\n", ESP.getFreeSketchSpace());
+  ESPhttpUpdate.rebootOnUpdate(false);
+  t_httpUpdate_return ret = ESPhttpUpdate.update(*client, url.url);
+  
+  Serial.println(ret);
+  Serial.println("Status code after firmware update: ");
+  Serial.println(ret);
+
+      switch (ret) {
+      case HTTP_UPDATE_FAILED:
+        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        Serial.println("HTTP_UPDATE_NO_UPDATES");
+        break;
+
+      case HTTP_UPDATE_OK:
+        Serial.println("HTTP_UPDATE_OK");
+        break;
+  }
+ 
   client->stop();
   delete client;
   return -2;

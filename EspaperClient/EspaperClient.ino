@@ -25,6 +25,9 @@ extern "C" {
   #include "user_interface.h"  // Required for wifi_station_connect() to work
 }
 
+#define xstr(a) str(a)
+#define str(a) #a
+
 #include <Arduino.h>
 #include <time.h>
 #include <ESP8266WiFi.h>
@@ -225,7 +228,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
   Serial.println(F("Boot sequence arrived in setup()"));
-  Serial.printf_P(PSTR("******** Client Version: %s ********\n"), "CLIENT_VERSION");
+  Serial.printf_P(PSTR("******** Client Version: %s ********\n"), xstr(CLIENT_VERSION));
   // Turn WiFi off until we really need it
   sleepWifi();
 
@@ -262,7 +265,7 @@ void setup() {
       delay(200);
       boolean timeInit = initTime();
       if (timeInit) {
-        EspaperParser parser(&gfx, rootCaCert, SERVER_URL, DEVICE_SECRET, String("CLIENT_VERSION"));
+        EspaperParser parser(&gfx, rootCaCert, SERVER_URL, DEVICE_SECRET, String(xstr(CLIENT_VERSION)));
         Serial.printf_P(PSTR("\n\n***Time before going to fetching data %d\n"), millis());
         deviceData.successfulDeviceStarts++;
         deviceData.lastNtpSyncTime = time(nullptr);

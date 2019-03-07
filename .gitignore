@@ -2,3 +2,7 @@
 .pioenvs
 .piolibdeps
 target/*
+.vscode
+.clang_complete
+.gcc-flags.json
+firmware.map

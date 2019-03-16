@@ -21,7 +21,8 @@
  SOFTWARE.
  */
 
-#pragma once
+#ifndef SETTINGS_H
+#define SETTINGS_H
 
 #include <FS.h>
 
@@ -38,15 +39,15 @@
  * User Settings
  **************************/
 
-String WIFI_SSID = "";
-String WIFI_PASS = "";
-String TIMEZONE = "";
-String NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
+static String WIFI_SSID = "";
+static String WIFI_PASS = "";
+static String TIMEZONE = "";
+static String NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
 
-String DEVICE_ID = "";
-String DEVICE_SECRET = "";
+static String DEVICE_ID = "";
+static String DEVICE_SECRET = "";
 
-uint8_t UPDATE_INTERVAL_MINS = 20;
+static uint8_t UPDATE_INTERVAL_MINS = 20;
 
 
 /***************************
@@ -93,7 +94,9 @@ const String SERVER_API_DEVICES_PATH = "/public/devices";
   // than HTTPS it won't actually be used, see EspaperParser::createWifiClient
   static const char rootCaCert[] PROGMEM = {};
   const String SERVER_URL = "http://192.168.0.143:8080";
+  #define USE_SECURE_WIFI_CLIENT 0
 #else
+  #define USE_SECURE_WIFI_CLIENT 1
   // exported from Firefox as x509.pem format
   static const char rootCaCert[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
@@ -158,22 +161,30 @@ Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ
 /*
  * BUSY>gpio4 RST>gpio2 DC>gpio5 CS>gpio15 CLK>gpio14 DIN>gpio13
  */
-#define CS 15  // D8
-#define RST 2  // D4
-#define DC 5   // D1
-#define BUSY 4 // D2
-#define USR_BTN 12 // D6
 
+#if defined(ESP8266) 
+  #define CS 15  // D8
+  #define RST 2  // D4
+  #define DC 5   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 12 // D6
+#elif defined(ESP32)
+  #define CS 5  // D8
+  #define RST 12  // D4
+  #define DC 19   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 37 // D6
+#endif
 
 /***************************
  * Functions
  **************************/
 
-bool isDeviceRegistered() {
+static bool isDeviceRegistered() {
   return DEVICE_ID.length() != 0 && DEVICE_SECRET.length() != 0;
 }
 
-void resetUserSettings() {
+static void resetUserSettings() {
   WIFI_SSID = "";
   WIFI_PASS = "";
   UPDATE_INTERVAL_MINS = 20;
@@ -182,3 +193,5 @@ void resetUserSettings() {
   DEVICE_ID = "";
   DEVICE_SECRET = "";
 }
+
+#endif //SETTINGS_H

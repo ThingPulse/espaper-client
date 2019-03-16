@@ -21,17 +21,12 @@
  SOFTWARE.
  */
 
-extern "C" {
-  #include "user_interface.h"  // Required for wifi_station_connect() to work
-}
-
 #define xstr(a) str(a)
 #define str(a) #a
 
 #include <Arduino.h>
 #include <time.h>
-#include <ESP8266WiFi.h>
-#include "settings.h"
+
 
 #ifdef EPD29
   #include <EPD_WaveShare_29.h>
@@ -85,51 +80,6 @@ void showMessage(String message) {
   gfx.drawStringMaxWidth(gfx.getWidth() / 2, STD_MESSAGE_Y_POSITION, gfx.getWidth() * MAX_TEXT_WIDTH_FACTOR, message);
   gfx.commit();
   gfx.freeBuffer();
-}
-
-boolean connectWifi() {
-  // Wake up WiFi
-  wifi_fpm_do_wakeup();
-  wifi_fpm_close();
-
-  //Serial.println("Reconnecting");
-  wifi_set_opmode(STATION_MODE);
-  wifi_station_connect();
-
-  // Disable the WiFi persistence.  The ESP8266 will not load and save WiFi settings in the flash memory.
-  // https://www.bakke.online/index.php/2017/05/21/reducing-wifi-power-consumption-on-esp8266-part-1/
-  WiFi.persistent(false);
-
-  if (WiFi.status() == WL_CONNECTED) return true;
-
-  // this 3 lines for a fix IP-address (and faster connection)
-  /*IPAddress ip(192, 168, 0, 60);
-  IPAddress gateway(192, 168, 0, 1);
-  IPAddress subnet(255, 255, 255, 0);
-  IPAddress dns(8, 8, 8, 8);
-  WiFi.config (ip, gateway, subnet, dns);*/
-
-  if (WIFI_PASS == "") {
-    Serial.println("Only SSID without password");
-    WiFi.begin(WIFI_SSID.c_str());
-  } else {
-    WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
-  }
-
-  int i = 0;
-  uint32_t startTime = millis();
-  Serial.print("WiFi connect");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(100);
-    i++;
-    if (millis() - startTime > 20000) {
-      Serial.println("\nFailed to connect to WiFi");
-      return false;
-    }
-    Serial.print(".");
-  }
-  Serial.println(WiFi.localIP());
-  return true;
 }
 
 bool initTime() {
@@ -194,22 +144,11 @@ void sleep() {
   Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
   epd.Sleep();
   Serial.printf_P(PSTR("\n\n***Time before going to sleep %d\n"), millis());
-  ESP.deepSleep(UPDATE_INTERVAL_MINS * 60 * 1000000, WAKE_RF_DISABLED );
-}
-
-void sleepWifi() {
-  Serial.println(F("Putting WiFi to sleep"));
-  WiFi.disconnect();
-  // Add delay as workaround for WDT reset described in unresolved issue
-  // https://github.com/esp8266/Arduino/issues/4082
-  delay(200);
-  WiFi.mode(WIFI_OFF);
-  WiFi.forceSleepBegin();
-  delay(100);
+  Board.deepSleep(UPDATE_INTERVAL_MINS);
 }
 
 void fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
-  int httpCode = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", buildOptionalHeaderFields(deviceData), sleepWifi);
+  int httpCode = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", buildOptionalHeaderFields(deviceData), &BoardClass::sleepWifi);
   if (httpCode == 410) {
     saveDeviceRegistration("", "");
     ESP.restart();
@@ -253,11 +192,12 @@ void setup() {
   Serial.println(F("Boot sequence arrived in setup()"));
   Serial.printf_P(PSTR("******** Client Version: %s ********\n"), xstr(CLIENT_VERSION));
   // Turn WiFi off until we really need it
-  sleepWifi();
+  Board.sleepWifi();
 
   Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
 
   gfx.setRotation(DEVICE_ROTATION);
+  gfx.setFastRefresh(true);
   gfx.setFastRefresh(false);
 
   pinMode(USR_BTN, INPUT_PULLUP);
@@ -283,7 +223,7 @@ void setup() {
     startConfigPortal(&gfx);
   } else {
     Serial.printf_P(PSTR("\n\n***Time before connecting to WiFi %d\n"), millis());
-    boolean success = connectWifi();
+    boolean success = Board.connectWifi(WIFI_SSID, WIFI_PASS);
     if (success) {
       delay(200);
       boolean timeInit = initTime();

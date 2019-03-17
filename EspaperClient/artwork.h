@@ -21,9 +21,9 @@
  SOFTWARE.
  */
 
-#pragma once
+#ifndef ARTWORK_H
+#define ARTWORK_H
 
-#include "settings.h"
 
 // xxd -i ThingPulse.svg and change type into const uint8_t ...[] PROGMEM
 
@@ -2143,3 +2143,6 @@ const uint8_t favicon_png[] PROGMEM = {
   0x95, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60,
   0x82
 };
+
+
+#endif

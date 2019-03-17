@@ -21,18 +21,24 @@
   SOFTWARE.
 */
 
-#pragma once
+#ifndef CONFIG_PORTAL_H
+#define CONFIG_PORTAL_H
 
-#include <ESP8266WebServer.h>
+#if defined(ESP8266) 
+ #include <ESP8266WebServer.h>
+#elif defined(ESP32)
+  #include <WebServer.h>
+#endif
+
 #include <MiniGrafx.h>
+#include "Board.h"
 #include "artwork.h"
 #include "timezones.h"
-#include "settings.h"
 
 const String CONFIG_FILE = "/espaper.txt";
 const String DATA_FILE = "/device-data.txt";
 
-const char HTTP_HEAD[] PROGMEM            = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/><title>{v}</title>"; // <link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/favicon.png\">
+const char HTTP_HEAD_START[] PROGMEM            = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/><title>{v}</title>"; // <link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"/favicon.png\">
 const char HTTP_STYLE[] PROGMEM           = "<style>div,input, select{padding:5px;font-size:1em;} input, select{width:95%;} body{text-align: center;font-family:verdana;} button{border:0;border-radius:0.3rem;background-color:#1fa3ec;color:#fff;line-height:2.4rem;font-size:1.2rem;width:100%;}</style>";
 const char HTTP_SCRIPT[] PROGMEM          = "<script>"
                                             "document.addEventListener('DOMContentLoaded',function() {"
@@ -94,7 +100,12 @@ typedef struct DeviceData {
   uint8_t actionAfterReboot;
 } DeviceData;
 
-ESP8266WebServer server (80);
+
+#if defined(ESP8266) 
+  ESP8266WebServer server (80);
+#elif defined(ESP32)
+  WebServer server (80);
+#endif
 
 String getFormField(String id, String placeholder, String length, String value, String customHTML) {
   String pitem = FPSTR(HTTP_FORM_PARAM);
@@ -259,7 +270,7 @@ void handleRoot() {
   server.sendHeader("Expires", "-1");
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
   server.send(200, "text/html", "");
-  String header = FPSTR(HTTP_HEAD);
+  String header = FPSTR(HTTP_HEAD_START);
   header.replace("{v}", "Options");
   server.sendContent(header);
   server.sendContent(FPSTR(HTTP_SCRIPT));
@@ -273,7 +284,7 @@ void handleRoot() {
   server.sendContent("<BR/>Free Heap: ");
   server.sendContent(String(ESP.getFreeHeap() / 1024.0));
   server.sendContent(" KB<BR/>Chip  Id: ");
-  server.sendContent(String(ESP.getChipId()));
+  server.sendContent(Board.getChipId());
   server.sendContent("<BR/>Flash Chip Size: ");
   server.sendContent(String(ESP.getFlashChipSize() / (1024 * 1024))); // no floating point required, it's always n MB
   server.sendContent(" MB<h2>Settings</h2>");
@@ -511,3 +522,5 @@ void saveDeviceRegistration(String deviceId, String deviceSecret) {
   DEVICE_SECRET = deviceSecret;
   saveConfig();
 }
+
+#endif

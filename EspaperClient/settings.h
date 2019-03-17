@@ -21,7 +21,8 @@
  SOFTWARE.
  */
 
-#pragma once
+#ifndef SETTINGS_H
+#define SETTINGS_H
 
 #include <FS.h>
 
@@ -29,24 +30,59 @@
  * Device Type
  **************************/
 
-//#define EPD29
-//#define EPD42
-//#define EPD75
+// enable one of these devices for the Arduino IDE
+// If you are using platformio enable the right device 
+// in platformio.ini
+//#define ESPAPER29BW
+//#define ESPAPER42BW
+//#define TTGOT529BW
+
+#if defined(ESPAPER29BW)
+  #define EPD29
+
+  #define CS 15  // D8
+  #define RST 2  // D4
+  #define DC 5   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 12 // D6
+
+  #define DEVICE_TYPE "Espaper29Bw"
+#elif defined(ESPAPER42BW)
+  #define EPD42
+
+  #define CS 15  // D8
+  #define RST 2  // D4
+  #define DC 5   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 12 // D6
+  
+  #define DEVICE_TYPE "Espaper42Bw"
+#elif defined(TTGOT529BW)
+  #define EPD29
+
+  #define CS 5  // D8
+  #define RST 12  // D4
+  #define DC 19   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 37 // D6
+
+  #define DEVICE_TYPE "TTGOT529Bw"
+#endif
 
 
 /***************************
  * User Settings
  **************************/
 
-String WIFI_SSID = "";
-String WIFI_PASS = "";
-String TIMEZONE = "";
-String NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
+static String WIFI_SSID = "";
+static String WIFI_PASS = "";
+static String TIMEZONE = "";
+static String NTP_SERVERS = "0.pool.ntp.org,1.pool.ntp.org,2.pool.ntp.org";
 
-String DEVICE_ID = "";
-String DEVICE_SECRET = "";
+static String DEVICE_ID = "";
+static String DEVICE_SECRET = "";
 
-uint8_t UPDATE_INTERVAL_MINS = 20;
+static uint8_t UPDATE_INTERVAL_MINS = 20;
 
 
 /***************************
@@ -66,25 +102,23 @@ const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & r
 #define NTP_MIN_VALID_EPOCH 1533081600
 #define NTP_SYNC_TIMEOUT_SECONDS 5
 
-#ifdef EPD29
-const float MAX_TEXT_WIDTH_FACTOR = 0.95;
-const uint8_t STD_MESSAGE_Y_POSITION = 12;
-#else
-const float MAX_TEXT_WIDTH_FACTOR = 0.85;
-const uint8_t STD_MESSAGE_Y_POSITION = 25;
+#if defined(EPD29)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.95;
+  const uint8_t STD_MESSAGE_Y_POSITION = 12;
+  #define SCREEN_TYPE "EPD29"
+#elif defined(EPD42)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.85;
+  const uint8_t STD_MESSAGE_Y_POSITION = 25;
+  #define SCREEN_TYPE "EPD42"
+#elif defined(EPD75)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.75;
+  const uint8_t STD_MESSAGE_Y_POSITION = 40;
+  #define SCREEN_TYPE "EPD75"
 #endif
 
 /**********************************
  * ESPaper Server-related Settings
  *********************************/
-
-#if defined(EPD29)
-const String SERVER_API_DEVICE_TYPE = "Espaper29Bw";
-#elif defined(EPD42)
-const String SERVER_API_DEVICE_TYPE = "Espaper42Bw";
-#elif defined(EPD75)
-const String SERVER_API_DEVICE_TYPE = "Espaper75Bw";
-#endif
 
 const String SERVER_API_DEVICES_PATH = "/public/devices";
 
@@ -93,7 +127,9 @@ const String SERVER_API_DEVICES_PATH = "/public/devices";
   // than HTTPS it won't actually be used, see EspaperParser::createWifiClient
   static const char rootCaCert[] PROGMEM = {};
   const String SERVER_URL = "http://192.168.0.143:8080";
+  #define USE_SECURE_WIFI_CLIENT 0
 #else
+  #define USE_SECURE_WIFI_CLIENT 1
   // exported from Firefox as x509.pem format
   static const char rootCaCert[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
@@ -127,53 +163,15 @@ Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ
 
 #endif
 
-
-/***************************
- * Hardware Settings
- **************************/
-
-/*
- * BUSY---->gpio4
- * RST---->gpio2
- * DC---->gpio5
- * CS---->gpio15
- * CLK---->gpio14
- * DIN---->gpio13
- * Buttons : Reset ( RST pins on esp ) ,
- * Flash ( GPIO-0 10K pull up )
- * User button ( GPIO-12 10K pull up )
- */
- /*
- Connect the following pins:
- Display  NodeMCU
- BUSY     D1
- RST      D2
- DC       D8
- CS       D3
- CLK      D5
- DIN      D7
- GND      GND
- 3.3V     3V3
-*/
-/*
- * BUSY>gpio4 RST>gpio2 DC>gpio5 CS>gpio15 CLK>gpio14 DIN>gpio13
- */
-#define CS 15  // D8
-#define RST 2  // D4
-#define DC 5   // D1
-#define BUSY 4 // D2
-#define USR_BTN 12 // D6
-
-
 /***************************
  * Functions
  **************************/
 
-bool isDeviceRegistered() {
+static bool isDeviceRegistered() {
   return DEVICE_ID.length() != 0 && DEVICE_SECRET.length() != 0;
 }
 
-void resetUserSettings() {
+static void resetUserSettings() {
   WIFI_SSID = "";
   WIFI_PASS = "";
   UPDATE_INTERVAL_MINS = 20;
@@ -182,3 +180,5 @@ void resetUserSettings() {
   DEVICE_ID = "";
   DEVICE_SECRET = "";
 }
+
+#endif //SETTINGS_H

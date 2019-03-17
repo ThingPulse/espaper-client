@@ -25,7 +25,7 @@
 
 EspaperParser::EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion) {
   this->gfx = gfx;
-  this->certList = new X509List(rootCertificate);
+  this->rootCertificate = rootCertificate;
   this->baseUrl = baseUrl;
   this->deviceSecret = deviceSecret;
   this->clientVersion = clientVersion;
@@ -44,7 +44,7 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
   Serial.println("[HTTP] begin...");
 
   Serial.printf("Connecting to %s:%d\n", url.host.c_str(), url.port);
-  client->connect(url.host, url.port);
+  client->connect(url.host.c_str(), url.port);
   if (!client->connected()) {
     Serial.println("*** Can't connect. ***\n-------");
     return result;
@@ -58,7 +58,7 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
                    "Content-Type: application/json\r\n" +
                    "Content-Length: " + jsonData.length() + "\r\n" +
                    "X-ESPAPER-CLIENT-VERSION: " + this->clientVersion + EOL +
-                   "X-ESPAPER-BATTERY: " + String(analogRead(A0)) + EOL +
+                   "X-ESPAPER-BATTERY: " + String(Board.getBattery()) + EOL +
                    "X-ESPAPER-WIFI-RSSI: " + String(WiFi.RSSI()) + EOL +
                    "Connection: close\r\n\r\n" + jsonData;
 
@@ -228,14 +228,18 @@ WiFiClient* EspaperParser::createWifiClient(Url url) {
     return new WiFiClient();
   } else {
     Serial.println("Using secure WiFi client");
-    BearSSL::WiFiClientSecure *client = new BearSSL::WiFiClientSecure();
+    WiFiClientSecure *client = new WiFiClientSecure();
     Serial.println("[HTTP] configuring server root cert in client");
-    client->setTrustAnchors(this->certList);
-    bool mfln = client->probeMaxFragmentLength(url.host, url.port, 1024); 
-    Serial.printf("MFLN supported: %s\n", mfln ? "yes" : "no");
-    if (mfln) {
-      client->setBufferSizes(1024, 1024);
-    }
+    #if defined(ESP8266) 
+      client->setTrustAnchors(new X509List(this->rootCertificate));
+      bool mfln = client->probeMaxFragmentLength(url.host, url.port, 1024); 
+      Serial.printf("MFLN supported: %s\n", mfln ? "yes" : "no");
+      if (mfln) {
+        client->setBufferSizes(1024, 1024);
+      }
+    #elif defined(ESP32)
+      client->setCACert(this->rootCertificate);
+    #endif
     return client;
   }
 
@@ -246,14 +250,11 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
 
   WiFiClient *client = this->createWifiClient(url);
 
-  FSInfo fs_info;
-  SPIFFS.info(fs_info);
-
   Serial.println("[HTTP] begin...");
 
   Serial.printf("Connecting to %s:%d\n", url.host.c_str(), url.port);
   Serial.printf("Free mem: %d\n",  ESP.getFreeHeap());
-  client->connect(url.host, url.port);
+  client->connect(url.host.c_str(), url.port);
   if (!client->connected()) {
     Serial.println("*** Can't connect. ***\n-------");
     delete client;
@@ -266,14 +267,14 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
   String request = "GET " + url.path + " HTTP/1.1\r\n" +
                    "Host: " + url.host + "\r\n" +
                    "User-Agent: ESPaperClient/1.0\r\n" +
-                   "X-ESPAPER-BATTERY: " + String(analogRead(A0)) + EOL +
+                   "X-ESPAPER-BATTERY: " + String(Board.getBattery()) + EOL +
                    "X-ESPAPER-CLIENT-VERSION: " + this->clientVersion + EOL +
                    "X-ESPAPER-FREE-HEAP: " + String(ESP.getFreeHeap()) + EOL +
                    "X-ESPAPER-MILLIS: " + String(millis()) + "\r\n" +
-                   "X-ESPAPER-RESET-REASON: " + ESP.getResetReason() + EOL +
+                   // "X-ESPAPER-RESET-REASON: " + rtc_get_reset_reason(0) + EOL +
                    "X-ESPAPER-SECRET: " + this->deviceSecret + EOL +
-                   "X-ESPAPER-SPIFFS-FREE: " + (fs_info.totalBytes - fs_info.usedBytes) + EOL +
-                   "X-ESPAPER-SPIFFS-TOTAL: " + String(fs_info.totalBytes) + EOL +
+                   "X-ESPAPER-SPIFFS-FREE: " + String(Board.getFreeSPIFFSBytes()) + EOL +
+                   "X-ESPAPER-SPIFFS-TOTAL: " + String(Board.getTotalSPIFFSBytes()) + EOL +
                    "X-ESPAPER-WIFI-RSSI: " + String(WiFi.RSSI()) + EOL +
                    optionalHeaderFields +
                    "Connection: close\r\n\r\n";
@@ -390,15 +391,15 @@ void EspaperParser::updateFirmware(String requestPath) {
   WiFiClient *client = this->createWifiClient(url);
 
   Serial.printf(PSTR("Free sketch space: %d\n"), ESP.getFreeSketchSpace());
-  ESPhttpUpdate.rebootOnUpdate(false);
-  t_httpUpdate_return ret = ESPhttpUpdate.update(*client, urlPath);
+  HTTP_UPDATER.rebootOnUpdate(false);
+  t_httpUpdate_return ret = HTTP_UPDATER.update(*client, urlPath);
   
   Serial.print("Status code after firmware update: ");
   Serial.println(ret);
   // As per https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266httpUpdate/src/ESP8266httpUpdate.h#L57 there are currently 3 values supported
   switch (ret) {
     case HTTP_UPDATE_FAILED:
-      Serial.printf(PSTR("HTTP_UPDATE_FAILED Error (%d): %s\n"), ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+      Serial.printf(PSTR("HTTP_UPDATE_FAILED Error (%d): %s\n"), HTTP_UPDATER.getLastError(), HTTP_UPDATER.getLastErrorString().c_str());
       break;
 
     case HTTP_UPDATE_NO_UPDATES:

@@ -21,14 +21,20 @@
  SOFTWARE.
  */
 
-#pragma once
+#ifndef ESPAPER_PARSER_H
+#define ESPAPER_PARSER_H
+
+#include "Board.h"
+
+
+
 
 #include <WiFiClientSecure.h>
-#include <ESP8266httpUpdate.h>
-#include <ESP8266WiFi.h>
+
 #include <MiniGrafx.h>
 #include <Arduino.h>
 #include <MiniGrafxFonts.h>
+//#include <rom/rtc.h>
 
 #define HTTP_INTERNAL_CODE_UPGRADE_CLIENT -5
 
@@ -41,7 +47,7 @@ class EspaperParser {
     String requestPath;
     String deviceSecret;
     String clientVersion;
-    X509List *certList;
+    const char *rootCertificate;
 
     typedef struct Url {
       String protocol;
@@ -71,3 +77,6 @@ class EspaperParser {
   
     int getAndDrawScreen(String requestPath, String optionalHeaderFields, HandlerFunction downloadCompletedFunction);
 };
+
+
+#endif

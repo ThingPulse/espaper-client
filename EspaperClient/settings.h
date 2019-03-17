@@ -30,7 +30,14 @@
  * Device Type
  **************************/
 
-#if DEVICE_TYPE == Espaper29Bw
+// enable one of these devices for the Arduino IDE
+// If you are using platformio enable the right device 
+// in platformio.ini
+//#define ESPAPER29BW
+//#define ESPAPER42BW
+//#define TTGOT529BW
+
+#if defined(ESPAPER29BW)
   #define EPD29
 
   #define CS 15  // D8
@@ -38,7 +45,9 @@
   #define DC 5   // D1
   #define BUSY 4 // D2
   #define USR_BTN 12 // D6
-#elif DEVICE_TYPE == Espaper42Bw
+
+  #define DEVICE_TYPE "Espaper29Bw"
+#elif defined(ESPAPER42BW)
   #define EPD42
 
   #define CS 15  // D8
@@ -47,7 +56,8 @@
   #define BUSY 4 // D2
   #define USR_BTN 12 // D6
   
-#elif DEVICE_TYPE == TTGOT529Bw
+  #define DEVICE_TYPE "Espaper42Bw"
+#elif defined(TTGOT529BW)
   #define EPD29
 
   #define CS 5  // D8
@@ -55,12 +65,9 @@
   #define DC 19   // D1
   #define BUSY 4 // D2
   #define USR_BTN 37 // D6
+
+  #define DEVICE_TYPE "TTGOT529Bw"
 #endif
-
-
-//#define EPD29
-//#define EPD42
-//#define EPD75
 
 
 /***************************
@@ -95,25 +102,23 @@ const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & r
 #define NTP_MIN_VALID_EPOCH 1533081600
 #define NTP_SYNC_TIMEOUT_SECONDS 5
 
-#ifdef EPD29
-const float MAX_TEXT_WIDTH_FACTOR = 0.95;
-const uint8_t STD_MESSAGE_Y_POSITION = 12;
-#else
-const float MAX_TEXT_WIDTH_FACTOR = 0.85;
-const uint8_t STD_MESSAGE_Y_POSITION = 25;
+#if defined(EPD29)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.95;
+  const uint8_t STD_MESSAGE_Y_POSITION = 12;
+  #define SCREEN_TYPE "EPD29"
+#elif defined(EPD42)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.85;
+  const uint8_t STD_MESSAGE_Y_POSITION = 25;
+  #define SCREEN_TYPE "EPD42"
+#elif defined(EPD75)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.75;
+  const uint8_t STD_MESSAGE_Y_POSITION = 40;
+  #define SCREEN_TYPE "EPD75"
 #endif
 
 /**********************************
  * ESPaper Server-related Settings
  *********************************/
-
-#if defined(EPD29)
-const String SERVER_API_DEVICE_TYPE = "Espaper29Bw";
-#elif defined(EPD42)
-const String SERVER_API_DEVICE_TYPE = "Espaper42Bw";
-#elif defined(EPD75)
-const String SERVER_API_DEVICE_TYPE = "Espaper75Bw";
-#endif
 
 const String SERVER_API_DEVICES_PATH = "/public/devices";
 

@@ -28,9 +28,9 @@
 #include <time.h>
 #include "settings.h"
 
-#ifdef EPD29
+#if defined(EPD29)
   #include <EPD_WaveShare_29.h>
-#elif EPD42
+#elif defined(EPD42)
   #include <EPD_WaveShare_42.h>
 #else
   #error Please define in settings.h for which device you want to compile: EPD29 or EPD42
@@ -192,14 +192,18 @@ void setup() {
   Serial.println(F("Boot sequence arrived in setup()"));
   Serial.printf_P(PSTR("******** Client Version: %s ********\n"), xstr(CLIENT_VERSION));
   Serial.printf_P(PSTR("******** Device Type: %s ********\n"), xstr(DEVICE_TYPE));
+  Serial.printf_P(PSTR("******** Screen Type: %s ********\n"), xstr(SCREEN_TYPE));
+  Serial.printf_P(PSTR("Display Settings. CS: %d, RST: %d, DC: %d, BUSY: %d\n"), CS, RST, DC, BUSY);
+
+
   // Turn WiFi off until we really need it
   Board.sleepWifi();
 
   Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
 
   gfx.setRotation(DEVICE_ROTATION);
-  //gfx.setFastRefresh(true);
-  //gfx.setFastRefresh(false);
+  gfx.setFastRefresh(true);
+  gfx.setFastRefresh(false);
 
   pinMode(USR_BTN, INPUT_PULLUP);
   int btnState = digitalRead(USR_BTN);

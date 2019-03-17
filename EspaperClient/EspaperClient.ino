@@ -26,7 +26,7 @@
 
 #include <Arduino.h>
 #include <time.h>
-
+#include "settings.h"
 
 #ifdef EPD29
   #include <EPD_WaveShare_29.h>
@@ -118,7 +118,7 @@ bool initTime() {
 }
 
 String buildRegistrationRequestBody() {
-  return String(F("{\"macAddress\": \"")) + WiFi.macAddress() + String(F("\", \"deviceType\": \"")) + SERVER_API_DEVICE_TYPE + String(F("\", \"timeZone\": \"")) + getTimeZoneName() + String(F("\"}"));
+  return String(F("{\"macAddress\": \"")) + WiFi.macAddress() + String(F("\", \"deviceType\": \"")) + xstr(DEVICE_TYPE) + String(F("\", \"timeZone\": \"")) + getTimeZoneName() + String(F("\"}"));
 }
 
 String buildOptionalHeaderFields(DeviceData *deviceData) {
@@ -191,14 +191,15 @@ void setup() {
   Serial.println();
   Serial.println(F("Boot sequence arrived in setup()"));
   Serial.printf_P(PSTR("******** Client Version: %s ********\n"), xstr(CLIENT_VERSION));
+  Serial.printf_P(PSTR("******** Device Type: %s ********\n"), xstr(DEVICE_TYPE));
   // Turn WiFi off until we really need it
   Board.sleepWifi();
 
   Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
 
   gfx.setRotation(DEVICE_ROTATION);
-  gfx.setFastRefresh(true);
-  gfx.setFastRefresh(false);
+  //gfx.setFastRefresh(true);
+  //gfx.setFastRefresh(false);
 
   pinMode(USR_BTN, INPUT_PULLUP);
   int btnState = digitalRead(USR_BTN);

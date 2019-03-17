@@ -30,6 +30,34 @@
  * Device Type
  **************************/
 
+#if DEVICE_TYPE == Espaper29Bw
+  #define EPD29
+
+  #define CS 15  // D8
+  #define RST 2  // D4
+  #define DC 5   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 12 // D6
+#elif DEVICE_TYPE == Espaper42Bw
+  #define EPD42
+
+  #define CS 15  // D8
+  #define RST 2  // D4
+  #define DC 5   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 12 // D6
+  
+#elif DEVICE_TYPE == TTGOT529Bw
+  #define EPD29
+
+  #define CS 5  // D8
+  #define RST 12  // D4
+  #define DC 19   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 37 // D6
+#endif
+
+
 //#define EPD29
 //#define EPD42
 //#define EPD75
@@ -128,52 +156,6 @@ Ob8VZRzI9neWagqNdwvYkQsEjgfbKbYK7p2CNTUQ
       const String SERVER_URL = "https://www.espaper.com";
     #endif
 
-#endif
-
-
-/***************************
- * Hardware Settings
- **************************/
-
-/*
- * BUSY---->gpio4
- * RST---->gpio2
- * DC---->gpio5
- * CS---->gpio15
- * CLK---->gpio14
- * DIN---->gpio13
- * Buttons : Reset ( RST pins on esp ) ,
- * Flash ( GPIO-0 10K pull up )
- * User button ( GPIO-12 10K pull up )
- */
- /*
- Connect the following pins:
- Display  NodeMCU
- BUSY     D1
- RST      D2
- DC       D8
- CS       D3
- CLK      D5
- DIN      D7
- GND      GND
- 3.3V     3V3
-*/
-/*
- * BUSY>gpio4 RST>gpio2 DC>gpio5 CS>gpio15 CLK>gpio14 DIN>gpio13
- */
-
-#if defined(ESP8266) 
-  #define CS 15  // D8
-  #define RST 2  // D4
-  #define DC 5   // D1
-  #define BUSY 4 // D2
-  #define USR_BTN 12 // D6
-#elif defined(ESP32)
-  #define CS 5  // D8
-  #define RST 12  // D4
-  #define DC 19   // D1
-  #define BUSY 4 // D2
-  #define USR_BTN 37 // D6
 #endif
 
 /***************************

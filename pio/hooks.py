@@ -1,3 +1,5 @@
+import os
+import errno
 from shutil import copyfile
 
 
@@ -17,19 +19,35 @@ my_flags = env.ParseFlags(env['BUILD_FLAGS'])
 for key in my_flags['CPPDEFINES']:
     if isinstance(key, list) and key[0] == 'CLIENT_VERSION':
         CLIENT_VERSION = key[1]
-        print CLIENT_VERSION
+        print("Building client version {}.".format(CLIENT_VERSION))
 
 # get environment vars for built target
 PROJECTBUILD_DIR = env["PROJECTBUILD_DIR"]
 PIOENV = env["PIOENV"]
 PROGNAME = env["PROGNAME"]
+TARGET_DIR = "target"
 BUILD_TARGET = "/".join([PROJECTBUILD_DIR, PIOENV, PROGNAME + ".bin"])
-RELEASE_TARGET = "/".join(["target", PIOENV + "-" + CLIENT_VERSION + ".bin"])
+VERSION_FILE = "/".join([TARGET_DIR, "current.version"])
+RELEASE_TARGET = "/".join([TARGET_DIR, PIOENV + "-" + CLIENT_VERSION + ".bin"])
 
-# copy hex to release directory
+# copy binaries to target directory
 def copy2release(source, target, env):
     print("copying build {} to release {}".format(BUILD_TARGET, RELEASE_TARGET))
+    ensureDirectoryExists(RELEASE_TARGET)
     copyfile(BUILD_TARGET, RELEASE_TARGET)
+    writeVersionFile()
+
+def ensureDirectoryExists(filename):
+  if not os.path.exists(os.path.dirname(filename)):
+    try:
+      os.makedirs(os.path.dirname(filename))
+    except OSError as exc: # Guard against race condition
+      if exc.errno != errno.EEXIST:
+        raise
+
+def writeVersionFile():
+  with open(VERSION_FILE, "w") as versionFile:
+    versionFile.write("{}".format(CLIENT_VERSION))
 
 # add post hook
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", copy2release)

@@ -190,9 +190,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
   Serial.println(F("Boot sequence arrived in setup()"));
-  Serial.printf_P(PSTR("******** Client Version: %s ********\n"), xstr(CLIENT_VERSION));
-  Serial.printf_P(PSTR("******** Device Type: %s ********\n"), xstr(DEVICE_TYPE));
-  Serial.printf_P(PSTR("******** Screen Type: %s ********\n"), xstr(SCREEN_TYPE));
+  Serial.printf_P(PSTR("******** Client Version: \"%s\" ********\n"), xstr(CLIENT_VERSION));
+  Serial.printf_P(PSTR("******** Device Type: \"%s\" ********\n"), xstr(DEVICE_TYPE));
+  Serial.printf_P(PSTR("******** Screen Type: \"%s\" ********\n"), xstr(SCREEN_TYPE));
   Serial.printf_P(PSTR("Display Settings. CS: %d, RST: %d, DC: %d, BUSY: %d\n"), CS, RST, DC, BUSY);
 
 

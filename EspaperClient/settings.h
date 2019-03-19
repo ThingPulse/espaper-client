@@ -46,7 +46,7 @@
   #define BUSY 4 // D2
   #define USR_BTN 12 // D6
 
-  #define DEVICE_TYPE "Espaper29Bw"
+  #define DEVICE_TYPE Espaper29Bw
 #elif defined(ESPAPER42BW)
   #define EPD42
 
@@ -56,7 +56,7 @@
   #define BUSY 4 // D2
   #define USR_BTN 12 // D6
   
-  #define DEVICE_TYPE "Espaper42Bw"
+  #define DEVICE_TYPE Espaper42Bw
 #elif defined(TTGOT529BW)
   #define EPD29
 
@@ -66,7 +66,7 @@
   #define BUSY 4 // D2
   #define USR_BTN 37 // D6
 
-  #define DEVICE_TYPE "TTGOT529Bw"
+  #define DEVICE_TYPE TTGOT529Bw
 #endif
 
 
@@ -105,15 +105,15 @@ const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & r
 #if defined(EPD29)
   const float MAX_TEXT_WIDTH_FACTOR = 0.95;
   const uint8_t STD_MESSAGE_Y_POSITION = 12;
-  #define SCREEN_TYPE "EPD29"
+  #define SCREEN_TYPE EPD29
 #elif defined(EPD42)
   const float MAX_TEXT_WIDTH_FACTOR = 0.85;
   const uint8_t STD_MESSAGE_Y_POSITION = 25;
-  #define SCREEN_TYPE "EPD42"
+  #define SCREEN_TYPE EPD42
 #elif defined(EPD75)
   const float MAX_TEXT_WIDTH_FACTOR = 0.75;
   const uint8_t STD_MESSAGE_Y_POSITION = 40;
-  #define SCREEN_TYPE "EPD75"
+  #define SCREEN_TYPE EPD75
 #endif
 
 /**********************************

@@ -12,6 +12,8 @@ This client here is responsible for a simple & smooth registration process and f
 - go back to deep sleep
 - repeat
 
+Note that **the client has support for OTA** (Over-The-Air upgrades). See [details](#ota) below.
+
 ![](https://docs.thingpulse.com/img/products/ThingPulse-ESPaper-plus-kit.jpg)
 
 ## Service level promise
@@ -37,6 +39,11 @@ This client here is responsible for a simple & smooth registration process and f
 1. Initiate the registration process by restarting the device.
 1. Now go back to [https://www.espaper.com](https://www.espaper.com) and complete registration process by adding your device.
 1. Design the screen for your device.
+
+## OTA
+This firmware/application supports OTA (Over-The-Air upgrades). With every request for an updated screen it sends its client version to the server. Should that version be different from the current version then the server will, in addition to the screen, respond with instructions for the client to go fetch an updated binary. It will then load the new version from the server and update itself.
+
+**That means that you only need to manually install the client once.** After that it will keep itself up-to-date automatically.
 
 ## Support
 

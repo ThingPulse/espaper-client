@@ -453,6 +453,9 @@ void startConfigPortal(MiniGrafx *gfx) {
     #ifdef EPD42
       uint8_t yPosition = 180;
     #endif
+    #ifdef COLOR_TFT_24
+      uint8_t yPosition = 120;
+    #endif
     gfx->setFont(ArialMT_Plain_16);
     gfx->drawString(halfWidth, yPosition, "ESPaper Configuration Mode");
     gfx->drawStringMaxWidth(halfWidth, yPosition + 19, maxTextWidth, getJoinWifiMessage());

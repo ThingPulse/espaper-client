@@ -57,6 +57,15 @@
   #define USR_BTN 12 // D6
   
   #define DEVICE_TYPE Espaper42Bw
+#elif defined(ESP_COLOR_KIT)
+  #define COLOR_TFT_24
+
+  #define TFT_CS D1
+  #define TFT_DC D2
+  #define TFT_LED D8
+  #define USR_BTN D4
+  
+  #define DEVICE_TYPE Espaper42Bw
 #elif defined(TTGOT529BW)
   #define EPD29
 
@@ -114,6 +123,10 @@ const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & r
   const float MAX_TEXT_WIDTH_FACTOR = 0.75;
   const uint8_t STD_MESSAGE_Y_POSITION = 40;
   #define SCREEN_TYPE EPD75
+#elif defined(COLOR_TFT_24)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.75;
+  const uint8_t STD_MESSAGE_Y_POSITION = 40;
+  #define SCREEN_TYPE COLOR_TFT_24
 #endif
 
 /**********************************

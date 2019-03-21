@@ -27,7 +27,7 @@
 
 // xxd -i ThingPulse.svg and change type into const uint8_t ...[] PROGMEM
 
-#ifdef EPD29
+#if defined(EPD29) || defined(COLOR_TFT_24)
 unsigned int boot_screen_len = 4742;
 const char boot_screen[] PROGMEM = {
   0x01, 0x01, 0x01, 0x28, 0x00, 0x80, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -428,7 +428,7 @@ const char boot_screen[] PROGMEM = {
   0xff, 0xff
 };
 #endif
-#ifdef EPD42
+#if  defined(EPD42)
 unsigned int boot_screen_len = 15006;
 const char boot_screen[] PROGMEM = {
   0x01, 0x01, 0x01, 0x90, 0x01, 0x2c, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

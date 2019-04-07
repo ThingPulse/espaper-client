@@ -43,11 +43,17 @@ String BoardClass::getChipId() {
     #endif
 }
 
-void BoardClass::deepSleep(uint16_t sleepMinutes) {
+void BoardClass::deepSleep(uint32_t sleepSeconds) {
     #if defined(ESP8266) 
-        ESP.deepSleep(sleepMinutes * 60 * 1000000, WAKE_RF_DISABLED );
+        uint64_t sleepMicroSeconds = sleepSeconds * 1000000;
+        uint64_t maxSleepMicroSeconds = ESP.deepSleepMax();
+
+        uint64_t calculatedSleepMicroSeconds = maxSleepMicroSeconds < sleepMicroSeconds ? maxSleepMicroSeconds : sleepMicroSeconds;
+        Serial.printf_P(PSTR("Going to sleep for: %d[s]\n"),  calculatedSleepMicroSeconds / 1000000);
+        ESP.deepSleep(calculatedSleepMicroSeconds, WAKE_RF_DISABLED);
     #elif defined(ESP32)
-        esp_sleep_enable_timer_wakeup(sleepMinutes * 60 * 1000000);
+        Serial.printf_P(PSTR("Going to sleep for: %d[s]\n"),  sleepSeconds);
+        esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000);
         esp_deep_sleep_start();
     #endif
 }

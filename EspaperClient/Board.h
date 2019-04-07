@@ -53,7 +53,7 @@ class BoardClass {
 
         String getChipId();
 
-        void deepSleep(uint16_t sleepMinutes);
+        void deepSleep(uint32_t sleepSeconds);
 
         boolean connectWifi(String wifiSsid, String wifiPassword);
 

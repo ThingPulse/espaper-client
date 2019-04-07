@@ -140,20 +140,23 @@ void formatFileSystem() {
 }
 
 
-void sleep() {
+void startDeviceSleep(uint32_t sleepSeconds) {
   Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
   epd.Sleep();
   Serial.printf_P(PSTR("\n\n***Time before going to sleep %d\n"), millis());
-  Board.deepSleep(UPDATE_INTERVAL_MINS);
+  if (sleepSeconds == 0) {
+    sleepSeconds = UPDATE_INTERVAL_MINS * 60;
+  }
+  Board.deepSleep(sleepSeconds);
 }
 
-void fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
-  int httpCode = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", buildOptionalHeaderFields(deviceData), &BoardClass::sleepWifi);
-  if (httpCode == 410) {
+EspaperParser::ResourceResponse  fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
+  EspaperParser::ResourceResponse response = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", buildOptionalHeaderFields(deviceData), &BoardClass::sleepWifi);
+  if (response.httpCode == 410) {
     saveDeviceRegistration("", "");
     ESP.restart();
   }
-  if (httpCode == HTTP_INTERNAL_CODE_UPGRADE_CLIENT) {
+  if (response.httpCode == HTTP_INTERNAL_CODE_UPGRADE_CLIENT) {
     Serial.println(F("Firmware upgrade requested by server"));
     deviceData->actionAfterReboot = ACTION_AFTER_REBOOT_UPGRADE_FIRMWARE;
     saveDeviceData(deviceData);
@@ -161,6 +164,7 @@ void fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
   } else {
     deviceData->actionAfterReboot = ACTION_AFTER_REBOOT_UPDATE_SCREEN;
   }
+  return response;
 }
 
 void updateFirmware(EspaperParser *parser, DeviceData *deviceData) {
@@ -229,6 +233,7 @@ void setup() {
   } else {
     Serial.printf_P(PSTR("\n\n***Time before connecting to WiFi %d\n"), millis());
     boolean success = Board.connectWifi(WIFI_SSID, WIFI_PASS);
+    EspaperParser::ResourceResponse response;
     if (success) {
       delay(200);
       boolean timeInit = initTime();
@@ -241,7 +246,7 @@ void setup() {
           showMessageOverScreen(String(F("Firmware upgrade in progress...")));
           updateFirmware(&parser, &deviceData);
         } else if (isDeviceRegistered()) {
-          fetchAndDrawScreen(&parser, &deviceData);
+          response = fetchAndDrawScreen(&parser, &deviceData);
         } else {
           registerDevice(&parser, &deviceData);
         }
@@ -256,7 +261,7 @@ void setup() {
 
     deviceData.lastCycleDuration = millis();
     saveDeviceData(&deviceData);
-    sleep();
+    startDeviceSleep(response.sleepSeconds);
   }
 }
 

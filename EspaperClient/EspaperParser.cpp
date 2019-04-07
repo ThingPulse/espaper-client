@@ -122,24 +122,24 @@ EspaperParser::DeviceIdAndSecret EspaperParser::registerDevice(String requestPat
   return result;
 }
 
-int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFields, EspaperParser::HandlerFunction downloadCompletedFunction) {
+EspaperParser::ResourceResponse EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFields, EspaperParser::HandlerFunction downloadCompletedFunction) {
 
   String url = this->baseUrl + requestPath;
-  int httpCode = downloadResource(this->dissectUrl(url), "/screen", optionalHeaderFields);
+  EspaperParser::ResourceResponse response = downloadResource(this->dissectUrl(url), "/screen", optionalHeaderFields);
   downloadCompletedFunction();
 
-  if (httpCode == HTTP_INTERNAL_CODE_UPGRADE_CLIENT) {
+  if (response.httpCode == HTTP_INTERNAL_CODE_UPGRADE_CLIENT) {
     // In case of update return before the framebuffer is allocated, since it fragments the 
     // memory too much
     Serial.println(F("Update requested"));
-    return httpCode;
+    return response;
   }
 
   gfx->init();
   gfx->fillBuffer(1);
 
 
-  if (httpCode == 200) {
+  if (response.httpCode == 200) {
     gfx->drawPalettedBitmapFromFile(0, 0, "/screen");
   } else {
     uint16_t halfWidth = gfx->getWidth() / 2;
@@ -150,13 +150,13 @@ int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFie
     gfx->setFont(ArialMT_Plain_16);
     
     String message = "";
-    switch(httpCode) {
+    switch(response.httpCode) {
       case -2:  message = String(F("Connection to the server could not be established. Verify this device has access to the internet."));
                 break;
                 // TODO: "Starting registration process." is not correct, this parser can't possibly know that...
       case 410: message = String(F("This device is unknown to the server. It might have been deleted. Starting registration process."));
                 break;
-      default:  message = String(F("Error communicating with the server. HTTP status: ")) + String(httpCode);
+      default:  message = String(F("Error communicating with the server. HTTP status: ")) + String(response.httpCode);
                 break;
     }
     
@@ -167,7 +167,7 @@ int EspaperParser::getAndDrawScreen(String requestPath, String optionalHeaderFie
   Serial.println(F("De-allocating frame buffer"));
   gfx->freeBuffer();
     
-  return httpCode;
+  return response;
 }
 
 EspaperParser::Url EspaperParser::dissectUrl(String url) {
@@ -245,7 +245,11 @@ WiFiClient* EspaperParser::createWifiClient(Url url) {
 
 }
 
-int EspaperParser::downloadResource(Url url, String fileName, String optionalHeaderFields) {
+EspaperParser::ResourceResponse EspaperParser::downloadResource(Url url, String fileName, String optionalHeaderFields) {
+  EspaperParser::ResourceResponse response;
+  response.httpCode = 0;
+  response.sleepSeconds = 0;
+
   Serial.printf(PSTR("Downloading resource from:\n\tScheme: %s\n\tHost: %s\n\tPort: %d\n\tPath: %s\n"), url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str());
 
   WiFiClient *client = this->createWifiClient(url);
@@ -258,7 +262,8 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
   if (!client->connected()) {
     Serial.println("*** Can't connect. ***\n-------");
     delete client;
-    return -2;
+    response.httpCode = -2;
+    return response;
   }
 
   String EOL = "\r\n";
@@ -289,27 +294,31 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
       Serial.println(">>> Client Timeout !");
       client->stop();
       delete client;
-      return -2;
+      response.httpCode = -2;
+      return response;
     }
   }
 
   long lastUpdate = millis();
 
-  int httpCode = 0;
   while (client->available() || client->connected()) {
     String line = client->readStringUntil('\n');
     Serial.println(line);
     line.toUpperCase();
     if (line.startsWith("HTTP/1.")) {
-      httpCode = line.substring(9, line.indexOf(' ', 9)).toInt();
+      response.httpCode = line.substring(9, line.indexOf(' ', 9)).toInt();
     }
     if (line.startsWith("X-ESPAPER-COMMAND: UPDATE")) {
       Serial.println("Server requests firmware update");
-      return HTTP_INTERNAL_CODE_UPGRADE_CLIENT;
+      response.httpCode = HTTP_INTERNAL_CODE_UPGRADE_CLIENT;
+      return response;
+    }
+    if (line.startsWith("X-ESPAPER-SLEEP-SECONDS:")) {
+      response.sleepSeconds = line.substring(24).toInt();
     }
     if (line == "\r" || line == "\r\n") {
       Serial.println("headers received");
-      Serial.printf("Parsed HTTP code: %d\n", httpCode);
+      Serial.printf("Parsed HTTP code: %d\n", response.httpCode);
       break;
     }
     if (millis() - lastUpdate > 500) {
@@ -325,10 +334,10 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
   Serial.println("Processing body");
 
   long downloadedBytes = 0;
-  if (httpCode > 0) {
+  if (response.httpCode > 0) {
 
     // file found at server
-    if (httpCode == 200) {
+    if (response.httpCode == 200) {
       File file = SPIFFS.open(fileName, "w+");
       if (!file) {
         Serial.println("Creating file failed: " + fileName);
@@ -366,21 +375,22 @@ int EspaperParser::downloadResource(Url url, String fileName, String optionalHea
       Serial.printf("Downloaded file %s with size %d", fileName.c_str(), downloadedBytes);
       Serial.println();
       Serial.print("[HTTP] connection closed or file end.\n");
-      return httpCode;
+      return response;
     } else {
       client->stop();
       delete client;
-      return httpCode;
+      return response;
     }
   } else {
     client->stop();
     delete client;
-    return httpCode;
+    return response;
   }
 
   client->stop();
   delete client;
-  return -2;
+  response.httpCode = -2;
+  return response;
 }
 
 // As per https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#advanced-updater

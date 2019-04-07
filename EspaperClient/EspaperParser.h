@@ -39,7 +39,27 @@
 #define HTTP_INTERNAL_CODE_UPGRADE_CLIENT -5
 
 class EspaperParser {
+  public:
+    typedef std::function<void(void)> HandlerFunction;
 
+    typedef struct DeviceIdAndSecret {
+      String deviceId;
+      String deviceSecret;
+    } DeviceIdAndSecret;
+
+    typedef struct ResourceResponse {
+      int httpCode;
+      uint32_t sleepSeconds;
+    } ResourceResponse;
+  
+    EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion);
+
+    void updateFirmware(String url);
+    
+    DeviceIdAndSecret registerDevice(String requestPath, String jsonData);
+  
+    ResourceResponse getAndDrawScreen(String requestPath, String optionalHeaderFields, HandlerFunction downloadCompletedFunction);
+    
   private:
     MiniGrafx *gfx;
     uint8_t screenWidth;
@@ -56,26 +76,12 @@ class EspaperParser {
       String path;
     } Url;
 
-    int downloadResource(Url url, String fileName, String optionalHeaderFields);
+    ResourceResponse downloadResource(Url url, String fileName, String optionalHeaderFields);
     
     Url dissectUrl(String url);
     WiFiClient* createWifiClient(Url url);  
 
-  public:
-    typedef std::function<void(void)> HandlerFunction;
 
-    typedef struct DeviceIdAndSecret {
-      String deviceId;
-      String deviceSecret;
-    } DeviceIdAndSecret;
-  
-    EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion);
-
-    void updateFirmware(String url);
-    
-    DeviceIdAndSecret registerDevice(String requestPath, String jsonData);
-  
-    int getAndDrawScreen(String requestPath, String optionalHeaderFields, HandlerFunction downloadCompletedFunction);
 };
 
 

@@ -27,7 +27,9 @@ PIOENV = env["PIOENV"]
 PROGNAME = env["PROGNAME"]
 TARGET_DIR = "target"
 BUILD_TARGET = "/".join([PROJECTBUILD_DIR, PIOENV, PROGNAME + ".bin"])
-VERSION_FILE = "/".join([TARGET_DIR, "current.version"])
+VERSION_FILE_DEV = "/".join([TARGET_DIR, "current-DEV.version"])
+VERSION_FILE_TEST = "/".join([TARGET_DIR, "current-TEST.version"])
+VERSION_FILE_PROD = "/".join([TARGET_DIR, "current-PROD.version"])
 RELEASE_TARGET = "/".join([TARGET_DIR, PIOENV + "-" + CLIENT_VERSION + ".bin"])
 
 # copy binaries to target directory
@@ -46,7 +48,11 @@ def ensureDirectoryExists(filename):
         raise
 
 def writeVersionFile():
-  with open(VERSION_FILE, "w") as versionFile:
+  with open(VERSION_FILE_DEV, "w") as versionFile:
+    versionFile.write("{}".format(CLIENT_VERSION))
+  with open(VERSION_FILE_TEST, "w") as versionFile:
+    versionFile.write("{}".format(CLIENT_VERSION))
+  with open(VERSION_FILE_PROD, "w") as versionFile:
     versionFile.write("{}".format(CLIENT_VERSION))
 
 # add post hook

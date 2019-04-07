@@ -139,7 +139,7 @@ const String SERVER_API_DEVICES_PATH = "/public/devices";
   // use empty array as a placeholder, as the scheme is HTTP rather
   // than HTTPS it won't actually be used, see EspaperParser::createWifiClient
   static const char rootCaCert[] PROGMEM = {};
-  const String SERVER_URL = "http://192.168.0.143:8080";
+  const String SERVER_URL = "http://192.168.0.146:8080";
   #define USE_SECURE_WIFI_CLIENT 0
 #else
   #define USE_SECURE_WIFI_CLIENT 1

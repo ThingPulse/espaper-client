@@ -43,7 +43,7 @@ String BoardClass::getChipId() {
     #endif
 }
 
-void BoardClass::deepSleep(uint32_t sleepSeconds) {
+void BoardClass::deepSleep(uint64_t sleepSeconds) {
     #if defined(ESP8266) 
         uint64_t sleepMicroSeconds = sleepSeconds * 1000000;
         uint64_t maxSleepMicroSeconds = ESP.deepSleepMax();

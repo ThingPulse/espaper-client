@@ -46,7 +46,9 @@ String BoardClass::getChipId() {
 void BoardClass::deepSleep(uint64_t sleepSeconds) {
     #if defined(ESP8266) 
         uint64_t sleepMicroSeconds = sleepSeconds * 1000000;
-        uint64_t maxSleepMicroSeconds = ESP.deepSleepMax();
+        // Take 80% of maxDeepSleep, since we suspect it to be too optimistic in some cases
+        // This would cause some devices to never wake up again on their own.
+        uint64_t maxSleepMicroSeconds = ESP.deepSleepMax() * 0.8;
 
         uint64_t calculatedSleepMicroSeconds = maxSleepMicroSeconds < sleepMicroSeconds ? maxSleepMicroSeconds : sleepMicroSeconds;
         Serial.printf_P(PSTR("Going to sleep for: %d[s]\n"),  calculatedSleepMicroSeconds / 1000000);

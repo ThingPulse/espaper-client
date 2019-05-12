@@ -248,7 +248,7 @@ WiFiClient* EspaperParser::createWifiClient(Url url) {
 EspaperParser::ResourceResponse EspaperParser::downloadResource(Url url, String fileName, String optionalHeaderFields) {
   EspaperParser::ResourceResponse response;
   response.httpCode = 0;
-  response.sleepSeconds = 0;
+  response.sleepUntilEpoch = 0;
 
   Serial.printf(PSTR("Downloading resource from:\n\tScheme: %s\n\tHost: %s\n\tPort: %d\n\tPath: %s\n"), url.protocol.c_str(), url.host.c_str(), url.port, url.path.c_str());
 
@@ -313,8 +313,8 @@ EspaperParser::ResourceResponse EspaperParser::downloadResource(Url url, String 
       response.httpCode = HTTP_INTERNAL_CODE_UPGRADE_CLIENT;
       return response;
     }
-    if (line.startsWith("X-ESPAPER-SLEEP-SECONDS:")) {
-      response.sleepSeconds = line.substring(24).toInt();
+    if (line.startsWith("X-ESPAPER-SLEEP-UNTIL:")) {
+      response.sleepUntilEpoch = line.substring(22).toInt();
     }
     if (line == "\r" || line == "\r\n") {
       Serial.println("headers received");

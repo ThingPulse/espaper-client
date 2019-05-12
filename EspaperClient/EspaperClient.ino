@@ -54,6 +54,8 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
   #define DEVICE_ROTATION 2
 #endif
 
+time_t startTime;
+int startMillis;
 
 MiniGrafx gfx = MiniGrafx(&epd, BITS_PER_PIXEL, palette);
 
@@ -93,10 +95,10 @@ bool initTime() {
   // wait until NTP time was correctly syncronized
   uint8_t retryCounter = 0;
   time_t now;
-  uint32_t startTime = millis();
+  uint32_t ntpStartMillis = millis();
   uint16_t ntpTimeoutMillis = NTP_SYNC_TIMEOUT_SECONDS * 1000;
   while((now = time(nullptr)) < NTP_MIN_VALID_EPOCH) {
-    uint32_t runtimeMillis = millis() - startTime;
+    uint32_t runtimeMillis = millis() - ntpStartMillis;
     if (runtimeMillis > ntpTimeoutMillis) {
       Serial.printf("\nFailed to sync time through NTP. Giving up after %dms.\n", runtimeMillis);
       return false;
@@ -112,6 +114,8 @@ bool initTime() {
   }
   Serial.println();
   Serial.printf("Current time: %d\n", now);
+  startTime = now;
+  startMillis = millis();
   //#endif
 
   return true;
@@ -140,12 +144,18 @@ void formatFileSystem() {
 }
 
 
-void startDeviceSleep(uint32_t sleepSeconds) {
+void startDeviceSleep(uint32_t sleepUntilEpoch) {
   Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
   epd.Sleep();
-  Serial.printf_P(PSTR("\n\n***Time before going to sleep %d\n"), millis());
-  if (sleepSeconds == 0) {
+  int currentMillis = millis();
+  time_t now = startTime + ((currentMillis - startMillis) / 1000);
+  Serial.printf_P(PSTR("Start millis: %d, start time: %d, current millis: %d -> now: %d\n"),  startMillis, startTime, currentMillis, now);
+  uint64_t sleepSeconds;
+  if (sleepUntilEpoch == 0) {
+    // use the local client configuration if server sends "nothing" (0 -> undefined)
     sleepSeconds = UPDATE_INTERVAL_MINS * 60;
+  } else {
+    sleepSeconds = sleepUntilEpoch - now;
   }
   Board.deepSleep(sleepSeconds);
 }
@@ -261,7 +271,7 @@ void setup() {
 
     deviceData.lastCycleDuration = millis();
     saveDeviceData(&deviceData);
-    startDeviceSleep(response.sleepSeconds);
+    startDeviceSleep(response.sleepUntilEpoch);
   }
 }
 

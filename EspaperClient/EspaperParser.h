@@ -49,7 +49,7 @@ class EspaperParser {
 
     typedef struct ResourceResponse {
       int httpCode;
-      uint32_t sleepSeconds;
+      uint32_t sleepUntilEpoch;
     } ResourceResponse;
   
     EspaperParser(MiniGrafx *gfx, const char *rootCertificate, String baseUrl, String deviceSecret, String clientVersion);

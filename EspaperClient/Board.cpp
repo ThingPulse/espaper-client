@@ -117,6 +117,7 @@ void BoardClass::sleepWifi() {
     WiFi.mode(WIFI_OFF);
     
     #if defined(ESP8266) 
+        delay(10);
         WiFi.forceSleepBegin();
     #elif defined(ESP32)
 

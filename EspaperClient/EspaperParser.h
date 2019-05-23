@@ -49,6 +49,7 @@ class EspaperParser {
 
     typedef struct ResourceResponse {
       int httpCode;
+      uint32_t sleepSeconds;
       uint32_t sleepUntilEpoch;
     } ResourceResponse;
   

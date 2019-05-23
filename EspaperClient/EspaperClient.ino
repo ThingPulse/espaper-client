@@ -144,18 +144,23 @@ void formatFileSystem() {
 }
 
 
-void startDeviceSleep(uint32_t sleepUntilEpoch) {
+void startDeviceSleep(uint32_t sleepSeconds, uint32_t sleepUntilEpoch) {
   Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
   epd.Sleep();
   int currentMillis = millis();
   time_t now = startTime + ((currentMillis - startMillis) / 1000);
   Serial.printf_P(PSTR("Start millis: %d, start time: %d, current millis: %d -> now: %d\n"),  startMillis, startTime, currentMillis, now);
-  uint64_t sleepSeconds;
+  uint64_t effectiveSleepSeconds;
   if (sleepUntilEpoch == 0) {
     // use the local client configuration if server sends "nothing" (0 -> undefined)
-    sleepSeconds = UPDATE_INTERVAL_MINS * 60;
+    effectiveSleepSeconds = UPDATE_INTERVAL_MINS * 60;
   } else {
-    sleepSeconds = sleepUntilEpoch - now;
+    effectiveSleepSeconds = sleepUntilEpoch - now;
+    // If 'now' is completely off in either direction, for whatever reason, the device would not sleep at all or sleep 
+    // for far too long. It should be roughly the same value as 'sleepSeconds' provided by the server.
+    if (abs(sleepSeconds - effectiveSleepSeconds) > 600) {
+      effectiveSleepSeconds = sleepSeconds;
+    } 
   }
   Board.deepSleep(sleepSeconds);
 }
@@ -271,7 +276,7 @@ void setup() {
 
     deviceData.lastCycleDuration = millis();
     saveDeviceData(&deviceData);
-    startDeviceSleep(response.sleepUntilEpoch);
+    startDeviceSleep(response.sleepSeconds, response.sleepUntilEpoch);
   }
 }
 

@@ -32,6 +32,8 @@
   #include <EPD_WaveShare_29.h>
 #elif defined(EPD42)
   #include <EPD_WaveShare_42.h>
+#elif defined(EPD75)
+  #include <EPD_WaveShare_75.h>
 #else
   #error Please define in settings.h for which device you want to compile: EPD29 or EPD42
 #endif
@@ -53,6 +55,10 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
   EPD_WaveShare42 epd(CS, RST, DC, BUSY);
   #define DEVICE_ROTATION 2
 #endif
+#ifdef EPD75
+  EPD_WaveShare75 epd(CS, RST, DC, BUSY);
+  #define DEVICE_ROTATION 0
+#endif 
 
 time_t startTime;
 int startMillis;

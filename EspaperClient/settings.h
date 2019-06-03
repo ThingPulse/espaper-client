@@ -57,6 +57,21 @@
   #define USR_BTN 12 // D6
   
   #define DEVICE_TYPE Espaper42Bw
+#elif defined(ESPAPER75BW)
+  #define EPD75
+
+  #define CS 2
+  #define RST 15
+  #define DC 5
+  #define BUSY 4
+  #define USR_BTN 12
+  #define IMU_SDA 21
+  #define IMU_SCL 22
+  #define WAKE_UP_PIN GPIO_NUM_27
+  #define BUZZER_PIN GPIO_NUM_32
+  #define LED_PIN 26
+  
+  #define DEVICE_TYPE Espaper75Bw
 #elif defined(ESP_COLOR_KIT)
   #define COLOR_TFT_24
 

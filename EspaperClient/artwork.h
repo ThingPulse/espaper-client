@@ -428,7 +428,7 @@ const char boot_screen[] PROGMEM = {
   0xff, 0xff
 };
 #endif
-#if  defined(EPD42)
+#if  defined(EPD42) || defined(EPD75)
 unsigned int boot_screen_len = 15006;
 const char boot_screen[] PROGMEM = {
   0x01, 0x01, 0x01, 0x90, 0x01, 0x2c, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

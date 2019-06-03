@@ -453,6 +453,9 @@ void startConfigPortal(MiniGrafx *gfx) {
     #ifdef EPD42
       uint8_t yPosition = 180;
     #endif
+    #ifdef EPD75
+      uint8_t yPosition = 180;
+    #endif
     #ifdef COLOR_TFT_24
       uint8_t yPosition = 120;
     #endif

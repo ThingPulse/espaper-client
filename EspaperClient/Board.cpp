@@ -129,6 +129,8 @@ uint32_t BoardClass::getBattery() {
     #if defined(ESP8266) 
         return analogRead(A0);
     #elif defined(ESP32)
+        // n/a, see https://github.com/espressif/arduino-esp32/issues/469
+        
         // actually for TTGO T5 V2.2 board, not ESP32 in general
         return analogRead(A7);
     #endif

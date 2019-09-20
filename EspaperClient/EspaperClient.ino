@@ -145,7 +145,7 @@ void formatFileSystem() {
 
 
 void startDeviceSleep(uint32_t sleepSeconds, uint32_t sleepUntilEpoch) {
-  Serial.printf_P(PSTR("Free mem: %d\n"),  ESP.getFreeHeap());
+  Serial.printf_P(PSTR("Free mem: %d.\n"),  ESP.getFreeHeap());
   epd.Sleep();
   int currentMillis = millis();
   time_t now = startTime + ((currentMillis - startMillis) / 1000);
@@ -153,6 +153,7 @@ void startDeviceSleep(uint32_t sleepSeconds, uint32_t sleepUntilEpoch) {
   uint64_t effectiveSleepSeconds;
   if (sleepUntilEpoch == 0) {
     // use the local client configuration if server sends "nothing" (0 -> undefined)
+    Serial.printf_P(PSTR("'sleepUntilEpoch' is 0. Using configured default update interval of %dmin.\n"),  UPDATE_INTERVAL_MINS);
     effectiveSleepSeconds = UPDATE_INTERVAL_MINS * 60;
   } else {
     effectiveSleepSeconds = sleepUntilEpoch - now;
@@ -162,7 +163,7 @@ void startDeviceSleep(uint32_t sleepSeconds, uint32_t sleepUntilEpoch) {
       effectiveSleepSeconds = sleepSeconds;
     } 
   }
-  Board.deepSleep(sleepSeconds);
+  Board.deepSleep(effectiveSleepSeconds);
 }
 
 EspaperParser::ResourceResponse  fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {

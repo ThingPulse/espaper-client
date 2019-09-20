@@ -138,7 +138,6 @@ EspaperParser::ResourceResponse EspaperParser::getAndDrawScreen(String requestPa
   gfx->init();
   gfx->fillBuffer(1);
 
-
   if (response.httpCode == 200) {
     gfx->drawPalettedBitmapFromFile(0, 0, "/screen");
   } else {
@@ -151,12 +150,16 @@ EspaperParser::ResourceResponse EspaperParser::getAndDrawScreen(String requestPa
     
     String message = "";
     switch(response.httpCode) {
-      case -2:  message = String(F("Connection to the server could not be established. Verify this device has access to the internet."));
+      case -2:  message = String(F("Connection to the server could not be established or it timed out. Verify this device has access to the internet. Will retry in 1min."));
+                response.sleepSeconds = 60;
+                response.sleepUntilEpoch = 60; // anything beyond 0 is ok, see startDeviceSleep() in sketch
                 break;
                 // TODO: "Starting registration process." is not correct, this parser can't possibly know that...
       case 410: message = String(F("This device is unknown to the server. It might have been deleted. Starting registration process."));
                 break;
-      default:  message = String(F("Error communicating with the server. HTTP status: ")) + String(response.httpCode);
+      default:  message = String(F("Error communicating with the server. HTTP status: ")) + String(response.httpCode) + ". Will retry in 1min.";
+                response.sleepSeconds = 60;
+                response.sleepUntilEpoch = 60; // anything beyond 0 is ok, see startDeviceSleep() in sketch
                 break;
     }
     

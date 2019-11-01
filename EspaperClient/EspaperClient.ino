@@ -172,7 +172,7 @@ void startDeviceSleep(uint32_t sleepSeconds, uint32_t sleepUntilEpoch) {
   Board.deepSleep(effectiveSleepSeconds);
 }
 
-EspaperParser::ResourceResponse  fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
+EspaperParser::ResourceResponse fetchAndDrawScreen(EspaperParser *parser, DeviceData *deviceData) {
   EspaperParser::ResourceResponse response = parser->getAndDrawScreen(SERVER_API_DEVICES_PATH + "/" + DEVICE_ID + "/screen", buildOptionalHeaderFields(deviceData), &BoardClass::sleepWifi);
   if (response.httpCode == 410) {
     saveDeviceRegistration("", "");
@@ -256,6 +256,11 @@ void setup() {
     Serial.printf_P(PSTR("\n\n***Time before connecting to WiFi %d\n"), millis());
     boolean success = Board.connectWifi(WIFI_SSID, WIFI_PASS);
     EspaperParser::ResourceResponse response;
+    // Initialize to restarting in 60s, comes into effect if WiFi or NTP connect fails (server cannot 
+    // deliver an effective value). In that case we probably want a fast retry rather than e.g. waiting
+    // for the default 20min or so.
+    response.sleepSeconds = 60;
+    response.sleepUntilEpoch = 60;
     if (success) {
       delay(200);
       boolean timeInit = initTime();

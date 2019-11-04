@@ -450,6 +450,9 @@ void startConfigPortal(MiniGrafx *gfx) {
     #ifdef EPD29
       uint8_t yPosition = 39;
     #endif
+    #ifdef EPD29T5
+      uint8_t yPosition = 39;
+    #endif
     #ifdef EPD42
       uint8_t yPosition = 180;
     #endif

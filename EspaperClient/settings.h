@@ -47,6 +47,17 @@
   #define USR_BTN 12 // D6
 
   #define DEVICE_TYPE Espaper29Bw
+#elif defined(ESPAPER29BWT5)
+  #define EPD29T5
+
+  #define CS 15  // D8
+  #define RST 2  // D4
+  #define DC 5   // D1
+  #define BUSY 4 // D2
+  #define USR_BTN 12 // D6
+  // TODO: use different device_type for server. But server needs to know this type first
+  #define DEVICE_TYPE Espaper29Bw
+
 #elif defined(ESPAPER42BW)
   #define EPD42
 
@@ -130,6 +141,10 @@ const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & r
   const float MAX_TEXT_WIDTH_FACTOR = 0.95;
   const uint8_t STD_MESSAGE_Y_POSITION = 12;
   #define SCREEN_TYPE EPD29
+#elif defined(EPD29T5)
+  const float MAX_TEXT_WIDTH_FACTOR = 0.95;
+  const uint8_t STD_MESSAGE_Y_POSITION = 12;
+  #define SCREEN_TYPE EPD29T5
 #elif defined(EPD42)
   const float MAX_TEXT_WIDTH_FACTOR = 0.85;
   const uint8_t STD_MESSAGE_Y_POSITION = 25;

@@ -30,6 +30,8 @@
 
 #if defined(EPD29)
   #include <EPD_WaveShare_29.h>
+#elif defined(EPD29T5)
+  #include <EPD_WaveShare_29T5.h>
 #elif defined(EPD42)
   #include <EPD_WaveShare_42.h>
 #elif defined(EPD75)
@@ -49,6 +51,10 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
 
 #ifdef EPD29
   EPD_WaveShare29 epd(CS, RST, DC, BUSY);
+  #define DEVICE_ROTATION 1
+#endif
+#ifdef EPD29T5
+  EPD_WaveShare29T5 epd(CS, RST, DC, BUSY);
   #define DEVICE_ROTATION 1
 #endif
 #ifdef EPD42

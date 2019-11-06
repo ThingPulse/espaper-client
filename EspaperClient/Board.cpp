@@ -27,8 +27,128 @@
 
 BoardClass Board;
 
+#if defined(ACTIVITY_LED_PIN)
+    volatile byte ledState;
+    volatile long timerCalls;
+    volatile long lastBlinkCall;
+#endif 
+
 BoardClass::BoardClass() {
 
+}
+
+boolean BoardClass::init() {
+  #if defined(USR_BTN)
+    pinMode(USR_BTN, INPUT_PULLUP);
+  #endif
+
+  #if defined(IMU_ADXL345)
+    if (!accelerometer.begin(IMU_SDA, IMU_SCL))
+    {
+      Serial.println("Could not find a valid ADXL345 sensor, check wiring!");
+      delay(500);
+    }
+
+
+    // Set tap detection on Z-Axis
+    accelerometer.setTapDetectionX(0);       // Don't check tap on X-Axis
+    accelerometer.setTapDetectionY(0);       // Don't check tap on Y-Axis
+    accelerometer.setTapDetectionZ(1);       // Check tap on Z-Axis
+    // or
+    // accelerometer.setTapDetectionXYZ(1);  // Check tap on X,Y,Z-Axis
+
+    accelerometer.setTapThreshold(2.5);      // Recommended 2.5 g
+    accelerometer.setTapDuration(0.02);      // Recommended 0.02 s
+    accelerometer.setDoubleTapLatency(0.10); // Recommended 0.10 s
+    accelerometer.setDoubleTapWindow(0.30);  // Recommended 0.30 s
+
+    accelerometer.setActivityThreshold(2.0);    // Recommended 2 g
+    accelerometer.setInactivityThreshold(2.0);  // Recommended 2 g
+    accelerometer.setTimeInactivity(5);         // Recommended 5 s
+
+    // Set activity detection only on X,Y,Z-Axis
+    //accelerometer.setActivityXYZ(1);         // Check activity on X,Y,Z-Axis
+    // or
+    accelerometer.setActivityX(1);        // Check activity on X_Axis
+    accelerometer.setActivityY(1);        // Check activity on Y-Axis
+    accelerometer.setActivityZ(0);        // Check activity on Z-Axis
+
+    // Set inactivity detection only on X,Y,Z-Axis
+    //accelerometer.setInactivityXYZ(1);       // Check inactivity on X,Y,Z-Axis
+
+    // Select INT 1 for get activities
+    accelerometer.useInterrupt(ADXL345_INT1);
+    pinMode(WAKE_UP_PIN, INPUT);
+
+    esp_sleep_enable_ext0_wakeup(WAKE_UP_PIN,1);
+    attachInterrupt(digitalPinToInterrupt(WAKE_UP_PIN), &BoardClass::wakeup, CHANGE);
+  #endif
+  return true;
+
+}
+
+void BoardClass::wakeup() {
+  Serial.println("Triggered wakeup");
+  ESP.restart();
+}
+
+boolean BoardClass::isConfigMode() {
+  Serial.println(F("Checking config mode"));
+  #if defined(IMU_ADXL345)
+    if (getRotation() == 4) {
+      Serial.println(F("Device laying flat. Entering config mode..."));
+      return true;
+    }
+    return false;
+  #endif
+
+  #if defined(USR_BTN) 
+    return !digitalRead(USR_BTN);
+  #endif
+
+
+}
+
+uint8_t BoardClass::getRotation() {
+  #if defined(IMU_ADXL345)
+    uint8_t sampleCount = 5;
+    Vector norm = accelerometer.readNormalize();
+    // We need to read activities to flush FIFO buffer
+    Activites activites = accelerometer.readActivites();
+    uint8_t rotation = 0;
+    uint8_t unchangedRotationCount = 0;
+    uint8_t currentRotation = 0;
+    while (true) {
+      if (norm.ZAxis > 8) {
+        return 4;
+      } else if (norm.XAxis > 8) {
+        currentRotation = 1;
+      } else if (norm.XAxis < -8) {
+        currentRotation = 3;
+      } else if (norm.YAxis > 8) {
+        currentRotation = 2;
+      } else if (norm.YAxis < -8) {
+        currentRotation = 0;
+      } else {
+        currentRotation =  3;
+      }
+      if (rotation == currentRotation) {
+        unchangedRotationCount++;
+      } else {
+        rotation = currentRotation;
+        unchangedRotationCount = 0;
+      }
+
+      if (unchangedRotationCount > sampleCount) {
+        //Serial.printf_P(FPSTR("Rotation: %d"), rotation);
+        return rotation;
+      }
+      delay (100);
+    }
+    return 0;
+  #else
+    return DEVICE_ROTATION;
+  #endif
 }
 
 String BoardClass::getChipId() {

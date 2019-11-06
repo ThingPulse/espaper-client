@@ -364,6 +364,7 @@ EspaperParser::ResourceResponse EspaperParser::downloadResource(Url url, String 
           downloadedBytes += c;
 
           file.write(buff, c);
+          file.flush();
           Serial.print("#");
         }
         if (millis() - lastUpdate > 500) {
@@ -372,6 +373,7 @@ EspaperParser::ResourceResponse EspaperParser::downloadResource(Url url, String 
         }
 
       }
+      file.flush();
       file.close();
       client->stop();
       delete client;

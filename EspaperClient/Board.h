@@ -46,10 +46,16 @@
     #define HTTP_UPDATER httpUpdate
 #endif
 
+#if defined(IMU_ADXL345)
+    #include "ADXL345.h"
+#endif
+
 class BoardClass {
 
     public:
         BoardClass();
+
+        boolean init();
 
         String getChipId();
 
@@ -66,6 +72,20 @@ class BoardClass {
         uint32_t getTotalSPIFFSBytes();
 
         WiFiClient* createWifiClient(const char *rootCertificate);
+
+        boolean isConfigMode();
+
+        uint8_t getRotation();
+
+        
+
+        static void wakeup();
+
+    private:
+    #if defined(IMU_ADXL345)
+        ADXL345 accelerometer;
+    #endif
+
 
 };
 

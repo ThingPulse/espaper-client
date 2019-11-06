@@ -46,6 +46,8 @@
   #define BUSY 4 // D2
   #define USR_BTN 12 // D6
 
+  #define DEVICE_ROTATION 1
+
   #define DEVICE_TYPE Espaper29Bw
 #elif defined(ESPAPER29BWT5)
   #define EPD29T5
@@ -66,6 +68,8 @@
   #define DC 5   // D1
   #define BUSY 4 // D2
   #define USR_BTN 12 // D6
+
+  #define DEVICE_ROTATION 2
   
   #define DEVICE_TYPE Espaper42Bw
 #elif defined(ESPAPER75BW)
@@ -76,13 +80,17 @@
   #define DC 5
   #define BUSY 4
   #define USR_BTN 12
+
+  #define IMU_ADXL345
+
   #define IMU_SDA 21
   #define IMU_SCL 22
   #define WAKE_UP_PIN GPIO_NUM_27
   #define BUZZER_PIN GPIO_NUM_32
-  #define LED_PIN 26
+  #define ACTIVITY_LED_PIN 26
   
   #define DEVICE_TYPE Espaper75Bw
+  #define DEVICE_ROTATION 2
 #elif defined(ESP_COLOR_KIT)
   #define COLOR_TFT_24
 
@@ -90,6 +98,8 @@
   #define TFT_DC D2
   #define TFT_LED D8
   #define USR_BTN D4
+
+  #define DEVICE_ROTATION 1
   
   #define DEVICE_TYPE Espaper42Bw
 #elif defined(TTGOT529BW)
@@ -100,6 +110,8 @@
   #define DC 19   // D1
   #define BUSY 4 // D2
   #define USR_BTN 37 // D6
+
+  #define DEVICE_ROTATION 0
 
   #define DEVICE_TYPE TTGOT529Bw
 #endif
@@ -141,22 +153,37 @@ const String CONFIG_MODE_INSTRUCTION = "Press and hold LEFT button and press & r
   const float MAX_TEXT_WIDTH_FACTOR = 0.95;
   const uint8_t STD_MESSAGE_Y_POSITION = 12;
   #define SCREEN_TYPE EPD29
+  #define BOOT_SCREEN_X 0
+  #define BOOT_SCREEN_Y 0
+  #define JOIN_WIFI_MESSAGE_Y 39
 #elif defined(EPD29T5)
   const float MAX_TEXT_WIDTH_FACTOR = 0.95;
   const uint8_t STD_MESSAGE_Y_POSITION = 12;
   #define SCREEN_TYPE EPD29T5
+  #define BOOT_SCREEN_X 0
+  #define BOOT_SCREEN_Y 0
+  #define JOIN_WIFI_MESSAGE_Y 39
 #elif defined(EPD42)
   const float MAX_TEXT_WIDTH_FACTOR = 0.85;
   const uint8_t STD_MESSAGE_Y_POSITION = 25;
   #define SCREEN_TYPE EPD42
+  #define BOOT_SCREEN_X 0
+  #define BOOT_SCREEN_Y 0
+  #define JOIN_WIFI_MESSAGE_Y 180
 #elif defined(EPD75)
   const float MAX_TEXT_WIDTH_FACTOR = 0.75;
   const uint8_t STD_MESSAGE_Y_POSITION = 40;
   #define SCREEN_TYPE EPD75
+  #define BOOT_SCREEN_X 120
+  #define BOOT_SCREEN_Y 42
+  #define JOIN_WIFI_MESSAGE_Y 224
 #elif defined(COLOR_TFT_24)
   const float MAX_TEXT_WIDTH_FACTOR = 0.75;
   const uint8_t STD_MESSAGE_Y_POSITION = 40;
   #define SCREEN_TYPE COLOR_TFT_24
+  #define BOOT_SCREEN_X 0
+  #define BOOT_SCREEN_Y 0
+  #define JOIN_WIFI_MESSAGE_Y 120
 #endif
 
 /**********************************

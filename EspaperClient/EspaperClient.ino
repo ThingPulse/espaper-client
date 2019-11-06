@@ -51,7 +51,6 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
 
 #ifdef EPD29
   EPD_WaveShare29 epd(CS, RST, DC, BUSY);
-  #define DEVICE_ROTATION 1
 #endif
 #ifdef EPD29T5
   EPD_WaveShare29T5 epd(CS, RST, DC, BUSY);
@@ -59,11 +58,9 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
 #endif
 #ifdef EPD42
   EPD_WaveShare42 epd(CS, RST, DC, BUSY);
-  #define DEVICE_ROTATION 2
 #endif
 #ifdef EPD75
   EPD_WaveShare75 epd(CS, RST, DC, BUSY);
-  #define DEVICE_ROTATION 0
 #endif 
 
 time_t startTime;
@@ -237,8 +234,6 @@ void setup() {
   gfx.setFastRefresh(true);
   gfx.setFastRefresh(false);
 
-  pinMode(USR_BTN, INPUT_PULLUP);
-  int btnState = digitalRead(USR_BTN);
   Serial.println(F("Checking FS"));
   boolean isMounted = SPIFFS.begin();
   if (!isMounted) {
@@ -255,8 +250,11 @@ void setup() {
   deviceData.totalDeviceStarts++;
   saveDeviceData(&deviceData);
 
-  Serial.printf(PSTR("Button state: %d\n"), btnState);
-  if (btnState == LOW || !isConfigLoaded) {
+  Board.init();
+
+  int isConfigMode = Board.isConfigMode();
+  Serial.printf(PSTR("Enter config mode: %d\n"), isConfigMode);
+  if (isConfigMode || !isConfigLoaded) {
     startConfigPortal(&gfx);
   } else {
     Serial.printf_P(PSTR("\n\n***Time before connecting to WiFi %d\n"), millis());

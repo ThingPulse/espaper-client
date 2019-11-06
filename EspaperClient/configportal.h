@@ -140,6 +140,7 @@ boolean saveConfig() {
   f.println(DEVICE_ID);
   f.print("DEVICE_SECRET=");
   f.println(DEVICE_SECRET);
+  f.flush();
   f.close();
   Serial.println("Saved values");
   return true;
@@ -187,6 +188,7 @@ boolean loadConfig() {
     Serial.println("At least one configuration property not yet defined");
     return false;
   }
+  f.flush();
   f.close();
   Serial.println("Loaded config");
   return true;
@@ -236,7 +238,7 @@ void loadDeviceData(DeviceData *deviceData) {
       break;
     }
   }
-
+  f.flush();
   f.close();
   Serial.println(F("Loaded data file"));
 }
@@ -259,6 +261,7 @@ void saveDeviceData(DeviceData* deviceData) {
   f.println(deviceData->lastCycleDuration);
   f.print(F("ACTION_AFTER_REBOOT="));
   f.println(deviceData->actionAfterReboot);
+  f.flush();
   f.close();
   Serial.println(F("Saved values in data file."));
 }
@@ -438,7 +441,7 @@ void startConfigPortal(MiniGrafx *gfx) {
 
   gfx->init();  
   gfx->fillBuffer(1);
-  gfx->drawPalettedBitmapFromPgm(0, 0, boot_screen);
+  gfx->drawPalettedBitmapFromPgm(BOOT_SCREEN_X, BOOT_SCREEN_Y, boot_screen);
   gfx->setColor(0);
   gfx->setTextAlignment(TEXT_ALIGN_CENTER);
 
@@ -447,24 +450,9 @@ void startConfigPortal(MiniGrafx *gfx) {
   uint16_t maxTextWidth = gfx->getWidth() * MAX_TEXT_WIDTH_FACTOR;
   if (f) {
     Serial.println("Configuration file present -> assume user manually started config portal");
-    #ifdef EPD29
-      uint8_t yPosition = 39;
-    #endif
-    #ifdef EPD29T5
-      uint8_t yPosition = 39;
-    #endif
-    #ifdef EPD42
-      uint8_t yPosition = 180;
-    #endif
-    #ifdef EPD75
-      uint8_t yPosition = 180;
-    #endif
-    #ifdef COLOR_TFT_24
-      uint8_t yPosition = 120;
-    #endif
     gfx->setFont(ArialMT_Plain_16);
-    gfx->drawString(halfWidth, yPosition, "ESPaper Configuration Mode");
-    gfx->drawStringMaxWidth(halfWidth, yPosition + 19, maxTextWidth, getJoinWifiMessage());
+    gfx->drawString(halfWidth, JOIN_WIFI_MESSAGE_Y, "ESPaper Configuration Mode");
+    gfx->drawStringMaxWidth(halfWidth, JOIN_WIFI_MESSAGE_Y + 19, maxTextWidth, getJoinWifiMessage());
   } else {
     Serial.println("Configuration file doesn't exist or is not readable -> assume virgin device");
     #ifdef EPD29

@@ -27,23 +27,23 @@
 #include <Arduino.h>
 #include "settings.h"
 
-#if defined(ESP8266) 
-    extern "C" {
-    #include "user_interface.h"  // Required for wifi_station_connect() to work
-    }
-    #include <ESP8266WiFi.h>
-    #include <ESP8266HTTPClient.h>
-    #include <ESP8266httpUpdate.h>
-    #include <FS.h>
+#if defined(ESP8266)
+  extern "C" {
+  #include "user_interface.h" // Required for wifi_station_connect() to work
+  }
+  #include <ESP8266HTTPClient.h>
+  #include <ESP8266WiFi.h>
+  #include <ESP8266httpUpdate.h>
+  #include <FS.h>
 
-    #define HTTP_UPDATER ESPhttpUpdate
+  #define HTTP_UPDATER ESPhttpUpdate
 #elif defined(ESP32)
-    #include <WiFi.h>
-    #include <HTTPClient.h>
-    #include <HTTPUpdate.h>
-    #include <SPIFFS.h>
+  #include <HTTPClient.h>
+  #include <HTTPUpdate.h>
+  #include <SPIFFS.h>
+  #include <WiFi.h>
 
-    #define HTTP_UPDATER httpUpdate
+  #define HTTP_UPDATER httpUpdate
 #endif
 
 #if defined(IMU_ADXL345)
@@ -51,42 +51,25 @@
 #endif
 
 class BoardClass {
+  public:
+    BoardClass();
+    boolean init();
+    String getChipId();
+    void deepSleep(uint64_t sleepSeconds);
+    boolean connectWifi(String wifiSsid, String wifiPassword);
+    static void sleepWifi();
+    uint32_t getBattery();
+    uint32_t getFreeSPIFFSBytes();
+    uint32_t getTotalSPIFFSBytes();
+    WiFiClient *createWifiClient(const char *rootCertificate);
+    boolean isConfigMode();
+    uint8_t getRotation();
+    static void wakeup();
 
-    public:
-        BoardClass();
-
-        boolean init();
-
-        String getChipId();
-
-        void deepSleep(uint64_t sleepSeconds);
-
-        boolean connectWifi(String wifiSsid, String wifiPassword);
-
-        static void sleepWifi();
-
-        uint32_t getBattery();
-
-        uint32_t getFreeSPIFFSBytes();
-
-        uint32_t getTotalSPIFFSBytes();
-
-        WiFiClient* createWifiClient(const char *rootCertificate);
-
-        boolean isConfigMode();
-
-        uint8_t getRotation();
-
-        
-
-        static void wakeup();
-
-    private:
+  private:
     #if defined(IMU_ADXL345)
-        ADXL345 accelerometer;
+      ADXL345 accelerometer;
     #endif
-
-
 };
 
 extern BoardClass Board;

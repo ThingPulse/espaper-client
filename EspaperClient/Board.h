@@ -42,6 +42,8 @@
   #include <HTTPUpdate.h>
   #include <SPIFFS.h>
   #include <WiFi.h>
+  #include <esp_wifi.h>
+  #include <esp_bt.h>
 
   #define HTTP_UPDATER httpUpdate
 #endif
@@ -67,6 +69,9 @@ class BoardClass {
     static void wakeup();
 
   private:
+    void persistToRtc();
+    bool readRtcData();
+    uint32_t calculateCRC32(const uint8_t *data, size_t length);
     #if defined(IMU_ADXL345)
       ADXL345 accelerometer;
     #endif

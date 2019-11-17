@@ -23,13 +23,23 @@
 
 #include "Board.h"
 
+// https://www.bakke.online/index.php/2017/06/24/esp8266-wifi-power-reduction-avoiding-network-scan/
+// The ESP8266 RTC memory is arranged into blocks of 4 bytes. The access methods read and write
+// 4 bytes at a time, so the RTC data structure should be padded to a 4-byte multiple.
+struct {
+  uint32_t crc32;     // 4 bytes
+  uint8_t channel;    // 1 byte,   5 in total
+  uint8_t bssid[6];   // 6 bytes, 11 in total
+  uint8_t padding;    // 1 byte,  12 in total
+} rtcData;
+
 BoardClass Board;
 
 #if defined(ACTIVITY_LED_PIN)
-    volatile byte ledState;
-    volatile long timerCalls;
-    volatile long lastBlinkCall;
-#endif 
+  volatile byte ledState;
+  volatile long timerCalls;
+  volatile long lastBlinkCall;
+#endif
 
 BoardClass::BoardClass() {
 
@@ -100,11 +110,9 @@ boolean BoardClass::isConfigMode() {
     return false;
   #endif
 
-  #if defined(USR_BTN) 
+  #if defined(USR_BTN)
     return !digitalRead(USR_BTN);
   #endif
-
-
 }
 
 uint8_t BoardClass::getRotation() {
@@ -172,20 +180,20 @@ void BoardClass::deepSleep(uint64_t sleepSeconds) {
     ESP.deepSleep(calculatedSleepMicroSeconds, WAKE_RF_DISABLED);
   #elif defined(ESP32)
     Serial.printf_P(PSTR("Going to sleep for: %d[s]\n"), sleepSeconds);
+    // https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/sleep_modes.html#wifi-bt-and-sleep-modes
+    esp_wifi_stop();
+    esp_bt_controller_disable();
     esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000);
     esp_deep_sleep_start();
   #endif
 }
 
 boolean BoardClass::connectWifi(String wifiSsid, String wifiPassword) {
-  Serial.println("Connecting to WiFi.");
+  Serial.println("(Re-)Connecting to WiFi.");
   // Wake up WiFi
   #if defined(ESP8266)
-    wifi_fpm_do_wakeup();
-    wifi_fpm_close();
-
-    wifi_set_opmode(STATION_MODE);
-    wifi_station_connect();
+    WiFi.forceSleepWake();
+    delay(1);
   #elif defined(ESP32)
 
   #endif
@@ -193,8 +201,10 @@ boolean BoardClass::connectWifi(String wifiSsid, String wifiPassword) {
   // Disable the WiFi persistence.  The ESP8266 will not load and save WiFi settings in the flash memory.
   // https://www.bakke.online/index.php/2017/05/21/reducing-wifi-power-consumption-on-esp8266-part-1/
   WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
 
   if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Already connected; doing nothing.");
     return true;
   }
 
@@ -205,30 +215,52 @@ boolean BoardClass::connectWifi(String wifiSsid, String wifiPassword) {
   IPAddress dns(8, 8, 8, 8);
   WiFi.config (ip, gateway, subnet, dns);*/
 
+  // Try to read WiFi settings from RTC memory
+  bool rtcValid = readRtcData();
+
+  const char* pwd = wifiPassword.c_str();
   if (wifiPassword == "") {
-    Serial.println("Only SSID without password");
-    WiFi.begin(wifiSsid.c_str());
+    Serial.println("Using SSID without password.");
+    pwd = nullptr;
+  }
+
+  if (rtcValid) {
+    Serial.println("Found valid WiFi quick-connect settings in RTC (channel & BSSID). Applying all.");
+    WiFi.begin(wifiSsid.c_str(), pwd, rtcData.channel, rtcData.bssid, true);
   } else {
-    WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
+    Serial.println("Setting simple WiFi config (w/o channel & BSSID).");
+    WiFi.begin(wifiSsid.c_str(), pwd);
   }
 
   int i = 0;
+  Serial.print("Establishing connection to AP");
   uint32_t startTime = millis();
   Serial.print("WiFi connect");
   while (WiFi.status() != WL_CONNECTED) {
-    delay(100);
     i++;
-    if (millis() - startTime > 20000) {
-      Serial.println("\nFailed to connect to WiFi");
+    if (i == 100 && rtcValid) {
+      Serial.println("\nQuick-connect failed. Resetting WiFi for a second attempt w/o preset channel & BSSID.");
+      sleepWifi();
+      WiFi.mode(WIFI_STA);
+      delay(10);
+      WiFi.begin(wifiSsid.c_str(), pwd);
+    }
+    if (i == 300) {
+      Serial.println("\nConnection could not be established in ~30s. Giving up.");
       return false;
     }
     Serial.print(".");
+    delay(100);
   }
-  Serial.println(WiFi.localIP());
+  Serial.printf("\nConnected after %dms. Using IP %s.\n", (millis() - startTime), WiFi.localIP().toString().c_str());
+
+  persistToRtc();
   return true;
 }
 
 void BoardClass::sleepWifi() {
+  Serial.println("Disconnecting WiFi and turning modem off.");
+  WiFi.disconnect();
   // https://github.com/esp8266/Arduino/issues/4082
   delay(200);
   WiFi.mode(WIFI_OFF);
@@ -296,5 +328,53 @@ WiFiClient* BoardClass::createWifiClient(const char *rootCertificate) {
   #else
     Serial.println("Using non-secure WiFi client");
     return new WiFiClient();
+  #endif
+}
+
+uint32_t BoardClass::calculateCRC32(const uint8_t *data, size_t length) {
+  uint32_t crc = 0xffffffff;
+  while (length--) {
+    uint8_t c = *data++;
+    for (uint32_t i = 0x80; i > 0; i >>= 1) {
+      bool bit = crc & 0x80000000;
+      if (c & i) {
+        bit = !bit;
+      }
+      crc <<= 1;
+      if (bit) {
+        crc ^= 0x04c11db7;
+      }
+    }
+  }
+  return crc;
+}
+
+// Try to read WiFi settings from RTC memory. Return true if successful; false otherwise.
+bool BoardClass::readRtcData() {
+  bool rtcValid = false;
+  #if defined(ESP8266)
+    if (ESP.rtcUserMemoryRead(0, (uint32_t *)&rtcData, sizeof(rtcData))) {
+      // Calculate the CRC of what we just read from RTC memory, but skip the
+      // first 4 bytes as that's the checksum itself.
+      uint32_t crc = calculateCRC32(((uint8_t *)&rtcData) + 4, sizeof(rtcData) - 4);
+      if (crc == rtcData.crc32) {
+        rtcValid = true;
+      }
+    }
+  #elif defined(ESP32)
+
+  #endif
+  return rtcValid;
+}
+
+// Write current connection info back to RTC.
+void BoardClass::persistToRtc() {
+  rtcData.channel = WiFi.channel();
+  memcpy(rtcData.bssid, WiFi.BSSID(), 6); // Copy 6 bytes of BSSID (AP's MAC address)
+  rtcData.crc32 = calculateCRC32(((uint8_t *)&rtcData) + 4, sizeof(rtcData) - 4);
+  #if defined(ESP8266)
+    ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtcData, sizeof(rtcData));
+  #elif defined(ESP32)
+
   #endif
 }

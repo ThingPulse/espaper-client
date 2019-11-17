@@ -61,7 +61,7 @@ uint16_t palette[] = {MINI_BLACK, MINI_WHITE};
 #endif
 #ifdef EPD75
   EPD_WaveShare75 epd(CS, RST, DC, BUSY);
-#endif 
+#endif
 
 time_t startTime;
 int startMillis;
@@ -166,11 +166,11 @@ void startDeviceSleep(uint32_t sleepSeconds, uint32_t sleepUntilEpoch) {
     effectiveSleepSeconds = UPDATE_INTERVAL_MINS * 60;
   } else {
     effectiveSleepSeconds = sleepUntilEpoch - now;
-    // If 'now' is completely off in either direction, for whatever reason, the device would not sleep at all or sleep 
+    // If 'now' is completely off in either direction, for whatever reason, the device would not sleep at all or sleep
     // for far too long. It should be roughly the same value as 'sleepSeconds' provided by the server.
     if (abs(sleepSeconds - effectiveSleepSeconds) > 600) {
       effectiveSleepSeconds = sleepSeconds;
-    } 
+    }
   }
   Board.deepSleep(effectiveSleepSeconds);
 }
@@ -212,7 +212,7 @@ void registerDevice(EspaperParser *parser, DeviceData *deviceData) {
     Serial.println(F("Device registration successful, now fetching OTP screen"));
     saveDeviceRegistration(d.deviceId, d.deviceSecret);
     fetchAndDrawScreen(parser, deviceData);
-  }  
+  }
 }
 
 void setup() {
@@ -223,10 +223,6 @@ void setup() {
   Serial.printf_P(PSTR("******** Device Type: \"%s\" ********\n"), xstr(DEVICE_TYPE));
   Serial.printf_P(PSTR("******** Screen Type: \"%s\" ********\n"), xstr(SCREEN_TYPE));
   Serial.printf_P(PSTR("Display Settings. CS: %d, RST: %d, DC: %d, BUSY: %d\n"), CS, RST, DC, BUSY);
-
-
-  // Turn WiFi off until we really need it
-  Board.sleepWifi();
 
   Serial.printf_P(PSTR("Current free heap: %d\n"), ESP.getFreeHeap());
 
@@ -260,7 +256,7 @@ void setup() {
     Serial.printf_P(PSTR("\n\n***Time before connecting to WiFi %d\n"), millis());
     boolean success = Board.connectWifi(WIFI_SSID, WIFI_PASS);
     EspaperParser::ResourceResponse response;
-    // Initialize to restarting in 60s, comes into effect if WiFi or NTP connect fails (server cannot 
+    // Initialize to restarting in 60s, comes into effect if WiFi or NTP connect fails (server cannot
     // deliver an effective value). In that case we probably want a fast retry rather than e.g. waiting
     // for the default 20min or so.
     response.sleepSeconds = 60;

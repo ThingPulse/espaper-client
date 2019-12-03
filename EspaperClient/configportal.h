@@ -292,8 +292,8 @@ void handleRoot() {
   server.sendContent(String(ESP.getFlashChipSize() / (1024 * 1024))); // no floating point required, it's always n MB
   server.sendContent(" MB<h2>Settings</h2>");
   server.sendContent(FPSTR(HTTP_FORM_START));
-  server.sendContent(getFormField("ssid", "WiFi SSID", "20", WIFI_SSID, ""));
-  server.sendContent(getFormField("password", "WiFi Password", "32", WIFI_PASS, "type='password'"));
+  server.sendContent(getFormField("ssid", "WiFi SSID", "32", WIFI_SSID, ""));
+  server.sendContent(getFormField("password", "WiFi Password", "63", WIFI_PASS, "type='password'"));
   // 3h = 180min seem to be a save value. Since ESP.deepSleepMax() returns a different value every time validation
   // based on a dynamic value can be very irritating for the user.
   String validationRules = String("type='number' min='1' max='180'");

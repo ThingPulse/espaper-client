@@ -57,6 +57,9 @@
   #define DC 5   // D1
   #define BUSY 4 // D2
   #define USR_BTN 12 // D6
+
+  #define DEVICE_ROTATION 1
+
   // TODO: use different device_type for server. But server needs to know this type first
   #define DEVICE_TYPE Espaper29Bw
 

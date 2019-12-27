@@ -30,7 +30,7 @@ Note that **the client has support for OTA** (Over-The-Air upgrades). See [detai
 	- You need at least ESP8266 Arduino Core 2.5.0
 1. Download or clone this repository to your computer. Then open it in the Arduino IDE.
 1. Install the [MiniGrafx library](https://github.com/ThingPulse/minigrafx) through the library manager in the Arduino IDE.
-1. Define the device type in [`settings.h:31ff`](https://github.com/ThingPulse/espaper-client/blob/master/settings.h#L31). Hints: 'EDP' = ESPaper Display, '29' = 2.9''
+1. Define the device type in [`settings.h:33ff`](https://github.com/ThingPulse/espaper-client/blob/master/EspaperClient/settings.h#L33). Hints: 'EDP' = ESPaper Display, '29' = 2.9''
 1. Compile and upload the sketch to your ESPaper module. Then Restart it.
 	- in Tools > Board: * > select "Generic ESP8266 Module"
 	- in Tools > Flash Mode select "QIO"
